@@ -240,7 +240,11 @@ Register the eval with **`suite_dataset`** = `<you>/decision-index-suite-0.2` an
 
 ### Register and smoke
 
-- Form schema: `input_param.json`. Repo URL: **this fork** (with `setup.sh` / `run.sh`), pin commit (e.g. `87d4650` + dashboard commits). `machine_type`: `n2-standard-4` for smoke.
+Full checklist: [docs/dashboard.md](docs/dashboard.md) (Runbook A §14.1 + private `suite_dataset` + runner `HF_TOKEN`).
+
+- Form schema: `input_param.json`. Repo URL: **this fork** (with `setup.sh` / `run.sh`), pin commit on `main`. `machine_type`: `n2-standard-4` for smoke.
+- **`suite_dataset`** (required): `adi060/decision-index-suite-0.2` after `scripts/upload_suite_to_hf.py`.
+- **Runner secret**: `HF_TOKEN` with read access to that dataset (not injected by default — see onboarding §3.6).
 - **`engine=grid`**: `base_url` `https://grid.ai.juspay.net/v1` (chat completions). **`engine=http`**: systemone **origin** only, e.g. `http://host:30012` (xor servers are started outside `run.sh`).
 - First run: **`task_range` `0-9`**, **`resume` `false`**. Unset **`DECISION_INDEX_STUB`** locally so you do not hit the fake score-42 path.
 - Pass: `…_results.json` with numeric Decision Index and `additional.status: scored` (not `no-results` / value 0).

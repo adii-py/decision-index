@@ -259,10 +259,22 @@ else
     fi
     if [ "$suite_missing" -eq 1 ]; then
         log_warn "suite not present under ${SUITE_DIR}."
-        log_warn "Build it once (apolinario/decision-index): suite rebuild + suite import, then upload with scripts/prepare_hub_upload.py."
-        log_warn "On the dashboard set suite_dataset=<you>/decision-index-suite-0.2 and HF_TOKEN on the runner."
-        if [ -z "$SUITE_DATASET" ] && [ -z "${HF_TOKEN:-}" ] && [ -z "${HUGGING_FACE_HUB_TOKEN:-}" ]; then
-            log_warn "No --suite-dataset and no HF_TOKEN; download will likely fail."
+        if [ -n "${EVAL_RUNNER_WORK_DIR:-}" ]; then
+            if [ -z "$SUITE_DATASET" ]; then
+                FAIL_REASON="suite_dataset is required on dashboard runs (private HF dataset, see README Eval-ops)"
+                log_err "$FAIL_REASON"
+                exit 1
+            fi
+            if [ -z "${HF_TOKEN:-}" ] && [ -z "${HUGGING_FACE_HUB_TOKEN:-}" ]; then
+                FAIL_REASON="HF_TOKEN must be set on the eval runner to download suite_dataset"
+                log_err "$FAIL_REASON"
+                exit 1
+            fi
+        else
+            log_warn "Build locally: suite rebuild + suite import, or upload with scripts/prepare_hub_upload.py."
+            if [ -z "$SUITE_DATASET" ] && [ -z "${HF_TOKEN:-}" ] && [ -z "${HUGGING_FACE_HUB_TOKEN:-}" ]; then
+                log_warn "No --suite-dataset and no HF_TOKEN; download will likely fail."
+            fi
         fi
     fi
 

@@ -145,9 +145,12 @@ def test_run_sh_fallback_and_manual_id(tmp_path):
 
 def test_input_param_schema_is_json():
     schema = json.loads((ROOT / "input_param.json").read_text())
-    names = [field["name"] for field in schema["fields"]]
-    assert names[0] == "model"
-    assert "model_alpha" in names
-    assert "delay_s" in names
-    assert schema["fields"][names.index("engine")]["default"] == "http"
-    assert "input_token_price" in names and "output_token_price" in names
+    by_name = {field["name"]: field for field in schema["fields"]}
+    assert by_name["model"]["required"] is True
+    assert by_name["model_alpha"]["required"] is True
+    assert by_name["suite_dataset"]["required"] is True
+    assert by_name["suite_dataset"]["default"] == "adi060/decision-index-suite-0.2"
+    assert by_name["engine"]["default"] == "http"
+    assert by_name["resume"]["default"] == "false"
+    assert "delay_s" in by_name
+    assert "input_token_price" in by_name and "output_token_price" in by_name

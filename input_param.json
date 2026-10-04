@@ -4,21 +4,29 @@
       "name": "model",
       "type": "text",
       "label": "Model",
-      "description": "Dashboard chat alias (Validate). Required for engine=grid. Ignored for engine=http — use model_alpha instead.",
+      "description": "Dashboard chat alias (Validate). Required by the form. For engine=http the systemone id is model_alpha; this field is not sent to the API.",
       "required": true
     },
     {
       "name": "model_alpha",
       "type": "text",
       "label": "Systemone model",
-      "description": "Model id sent to POST /v1/systemone when engine=http. Required for http runs; the dashboard chat model is not used.",
-      "required": false
+      "description": "Model id for POST /v1/systemone when engine=http (e.g. xor-1.2). Required for http runs.",
+      "required": true
+    },
+    {
+      "name": "suite_dataset",
+      "type": "text",
+      "label": "Suite dataset",
+      "description": "Private Hugging Face dataset with the frozen suite (prepare_hub_upload.py). The runner downloads this into suite-0.2/ using HF_TOKEN.",
+      "required": true,
+      "default": "adi060/decision-index-suite-0.2"
     },
     {
       "name": "base_url",
       "type": "text",
       "label": "Base URL",
-      "description": "Server origin. Trailing /v1 or /v1/systemone is stripped. For engine=http this is the systemone origin; for engine=grid /v1 is appended for chat completions.",
+      "description": "Server origin. Trailing /v1 or /v1/systemone is stripped. engine=http: systemone origin. engine=grid: /v1 is appended for chat completions.",
       "required": false,
       "default": "https://grid.ai.juspay.net"
     },
@@ -26,7 +34,7 @@
       "name": "engine",
       "type": "text",
       "label": "Engine",
-      "description": "http: POST /v1/systemone (default). grid: chat completions. random: uniform baseline, no model call.",
+      "description": "http: POST /v1/systemone (default). grid: chat completions. random: uniform baseline.",
       "required": false,
       "default": "http",
       "options": ["http", "grid", "random"]
@@ -43,7 +51,7 @@
       "name": "task_range",
       "type": "text",
       "label": "Task range",
-      "description": "Inclusive row indices, e.g. 0-9 runs rows 0 through 9, 50-100 runs rows 50 through 100. Leave empty for the full suite.",
+      "description": "Inclusive row indices. Use 0-9 for the first dashboard smoke (Runbook A §14.1). Leave empty for the full suite (~150k rows).",
       "required": false,
       "constraints": {"regex": "^[0-9]+-[0-9]+$"}
     },
@@ -51,7 +59,7 @@
       "name": "delay_s",
       "type": "number",
       "label": "Delay between requests (seconds)",
-      "description": "Sleep between API calls to stay under rate limits (default 0.5s ≈ 120 RPM).",
+      "description": "Rate limit sleep between API calls (default 0.5s ≈ 120 RPM).",
       "required": false,
       "default": 0.5,
       "constraints": {"min": 0, "max": 60}
@@ -68,17 +76,10 @@
       "name": "resume",
       "type": "text",
       "label": "Resume",
-      "description": "Keep a partial results.jsonl in this run directory. false starts over.",
+      "description": "Keep partial results.jsonl in the run directory. Use false for the first smoke run.",
       "required": false,
-      "default": "true",
+      "default": "false",
       "options": ["true", "false"]
-    },
-    {
-      "name": "suite_dataset",
-      "type": "text",
-      "label": "Suite dataset",
-      "description": "Private Hugging Face dataset you uploaded with prepare_hub_upload.py (selected-rows, added-rows, exclusions, manifest). Required for dashboard runs unless the VM already has a verified suite-0.2/ directory.",
-      "required": false
     },
     {
       "name": "input_token_price",
