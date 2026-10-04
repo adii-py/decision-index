@@ -21,6 +21,9 @@ def download(directory, dataset=None, revision=None, token=None, verify=True, ed
     os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
     from huggingface_hub import hf_hub_download
 
+    if token is None:
+        token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+
     e = editions.get(edition)
     directory = Path(directory)
     directory.mkdir(parents=True, exist_ok=True)

@@ -2,6 +2,7 @@ from decision_index.engines.base import Engine, NativeAbstention, RandomEngine, 
 
 REGISTRY = {
     "http": "decision_index.engines.http:HttpSystemOne",
+    "grid": "decision_index.engines.grid:GridChat",
     "transformers": "decision_index.engines.transformers_engine:TransformersEngine",
     "random": "decision_index.engines.base:RandomEngine",
 }

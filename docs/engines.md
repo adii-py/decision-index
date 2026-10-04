@@ -12,6 +12,15 @@ Exceptions have meaning: `Unsupported` marks a declared capacity limit (context 
 python -m decision_index run --engine http --option base_url=http://127.0.0.1:8000 --option model=my-model
 ```
 
+## `grid`
+
+OpenAI-compatible chat completions, the engine the eval-ops dashboard uses against Grid (`base_url` `https://grid.ai.juspay.net/v1`, bearer token from `OPENAI_API_KEY` or `DECISION_INDEX_API_KEY`). One request sends `state` and `questions` as JSON. The model must reply with one JSON object: a choice question's value is an option key, a noul question's value is a probability in `[0, 1]`. Choice probabilities are 1 on the chosen key and 0 on the rest. This is not the board's `/v1/systemone` protocol, and it does not read token logprobs. HTTP 400/413/422 bodies that mention a capacity marker are `Unsupported`.
+
+```sh
+python -m decision_index run --engine grid --model glm-latest \
+    --option base_url=https://grid.ai.juspay.net/v1
+```
+
 ## `transformers`
 
 Parallel constrained decoding on a stock causal LM (`AutoModelForCausalLM`). For each question:

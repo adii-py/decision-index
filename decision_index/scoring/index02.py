@@ -23,6 +23,8 @@ def share(answered, requests):
 
 
 def track_value(b):
+    if not b:
+        return dict(raw=0.0, skill=0.0, coverage=0.0, random=None, rule="track")
     h = headline(b)
     random = next((t.get("random") for t in b.get("tracks", []) if t["track"] == C.HEADLINE.get(b["catalog_id"], t["track"]) and t.get("random") is not None), None)
     return dict(raw=rnd(h["raw"]), skill=rnd(h["skill"]), coverage=rnd(h["coverage"]), random=random, rule="track")

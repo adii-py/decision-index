@@ -78,7 +78,25 @@ def cmd_run(args):
         keep = suite.in_edition
         corpus = suite.verify(strict=not args.no_verify)["sha256"]
     out = Path(args.out or ("runs/" + args.engine))
-    print(json.dumps(run(args.engine, engine_options(args), rows, out, limit=args.limit, compact=args.compact, resume=not args.fresh, corpus_sha256=corpus, keep=keep)))
+    print(
+        json.dumps(
+            run(
+                args.engine,
+                engine_options(args),
+                rows,
+                out,
+                limit=args.limit,
+                row_start=args.row_start,
+                row_end=args.row_end,
+                delay_s=args.delay_s,
+                logs_dir=args.logs_dir,
+                compact=args.compact,
+                resume=not args.fresh,
+                corpus_sha256=corpus,
+                keep=keep,
+            )
+        )
+    )
 
 
 def cmd_score(args):
@@ -193,6 +211,10 @@ def build_parser():
     p.add_argument("--rows", help="run over this rows file instead of the full suite")
     p.add_argument("--out")
     p.add_argument("--limit", type=int)
+    p.add_argument("--row-start", type=int, help="inclusive suite row index to start from")
+    p.add_argument("--row-end", type=int, help="inclusive suite row index to stop at")
+    p.add_argument("--delay-s", type=float, default=0.0, help="sleep between requests (rate limiting)")
+    p.add_argument("--logs-dir", help="write per-case JSON and ledger.jsonl here")
     p.add_argument("--compact", action="store_true", help="omit payload and raw_output from results rows")
     p.add_argument("--fresh", action="store_true", help="ignore an existing results.jsonl")
     p.set_defaults(func=cmd_run)

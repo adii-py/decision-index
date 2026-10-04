@@ -1,4 +1,5 @@
 import os
+import re
 
 from decision_index.engines.base import Engine, Unsupported
 
@@ -14,6 +15,30 @@ CAPACITY_MARKERS = (
     "too many tokens",
 )
 
+STOP_STATUS_CODES = frozenset({401, 403, 429})
+
+
+class HttpStop(RuntimeError):
+    """HTTP response that should end the run early but keep partial results."""
+
+    def __init__(self, status_code, message=""):
+        self.status_code = int(status_code)
+        self.message = message
+        super().__init__(f"HTTP {status_code}: {message[:500]}")
+
+
+def normalize_systemone_base_url(base_url):
+    base_url = (base_url or "").strip().rstrip("/")
+    for suffix in ("/v1/systemone", "/v1"):
+        if base_url.endswith(suffix):
+            return base_url[: -len(suffix)]
+    return base_url
+
+
+def grid_chat_base_url(base_url):
+    origin = normalize_systemone_base_url(base_url)
+    return origin + "/v1"
+
 
 class HttpSystemOne(Engine):
     name = "http"
@@ -23,7 +48,7 @@ class HttpSystemOne(Engine):
         super().__init__(**options)
         import httpx
 
-        base_url = base_url or os.environ.get("DECISION_INDEX_BASE_URL")
+        base_url = normalize_systemone_base_url(base_url or os.environ.get("DECISION_INDEX_BASE_URL") or os.environ.get("OPENAI_BASE_URL"))
         if not base_url:
             raise ValueError("HttpSystemOne needs base_url (or DECISION_INDEX_BASE_URL)")
         headers = {}
@@ -33,10 +58,18 @@ class HttpSystemOne(Engine):
         self.model = model
         self.extra = extra or {}
         self.client = httpx.Client(base_url=base_url, timeout=timeout, headers=headers)
-        self.provenance = {"kind": "http", "base_url": base_url, "model": model, "request_options": self.extra, "policy": "Unmodified state and questions sent as one /v1/systemone request; explicit capacity rejections (HTTP 422 with a known marker) are unsupported, other failures are errors."}
+        self.provenance = {
+            "kind": "http",
+            "base_url": base_url,
+            "model": model,
+            "request_options": self.extra,
+            "policy": "POST /v1/systemone with unmodified state and questions; explicit capacity rejections (HTTP 422 with a known marker) are unsupported.",
+        }
 
     def __call__(self, state, questions):
         r = self.client.post("/v1/systemone", json={"model": self.model, "state": state, "questions": questions, **self.extra})
+        if r.status_code in STOP_STATUS_CODES:
+            raise HttpStop(r.status_code, r.text)
         if r.status_code in (400, 413, 422):
             message = r.text
             if any(s in message for s in CAPACITY_MARKERS):

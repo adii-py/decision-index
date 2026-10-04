@@ -200,6 +200,53 @@ The board's entrants were run with their authors' own inference code. Entrants w
 
 The maintainers measure latency themselves, single-process on one RTX PRO 6000 using the fastest path the model's code supports, on a private held-out sample. That same sample is used to validate submitted runs by comparing answers. Models whose median latency there is over 1,000 ms per request are not added to the board: at that speed they are no longer Jev-like.
 
+## Eval-ops dashboard
+
+Reference kit: [apolinario/decision-index](https://github.com/apolinario/decision-index) (same CLI and suite rebuild as this repo). Dashboard entrypoints here: `setup.sh` installs a Python 3.12 venv; `run.sh` takes `[grid_key] eval_run_id --flags`, loads the frozen suite into `suite-0.2/` (not uploaded to GCS), runs the engine, scores, and writes `${EVAL_RUNNER_OUTPUT_DIR}/${eval_run_id}_results.json`. Request logs stay in `runs/<id>/`.
+
+### Getting the suite (required before a real run)
+
+The kit **does not assume a working public Hugging Face dataset**. The default id in `editions.py` (`multimodalart/decision-index-suite-0.2`) is a convenience name; you must **build or host** the files yourself ([upstream quickstart](https://github.com/apolinario/decision-index#quickstart-local)).
+
+**Option A — Build once on a machine with ~17 GB disk** (same as apolinario):
+
+```sh
+pip install -e ".[transformers,rebuild]"
+export HF_HUB_DISABLE_XET=1
+hf auth login   # gated sources (e.g. HLE)
+
+python -m decision_index suite rebuild --work work
+python -m decision_index suite import \
+    --rows work/artifacts/benchmark-suite/release-v2-rebuilt/selected-rows.jsonl.gz \
+    --added-rows work/artifacts/benchmark-suite/release-v2-rebuilt/added-rows.jsonl.gz
+```
+
+That creates `suite-0.2/` with the lab hashes. Copy that directory to the Batch VM only if you bake a custom image; normally use Option B.
+
+**Option B — Private Hub dataset for dashboard runs** (recommended):
+
+After Option A (or copying a trusted `suite-0.2/` from your team):
+
+```sh
+python scripts/prepare_hub_upload.py \
+    --rows work/artifacts/benchmark-suite/release-v2-rebuilt/selected-rows.jsonl.gz \
+    --added-rows work/artifacts/benchmark-suite/release-v2-rebuilt/added-rows.jsonl.gz \
+    --out hub-upload
+hf repo create <you>/decision-index-suite-0.2 --repo-type dataset --private
+hf upload <you>/decision-index-suite-0.2 hub-upload . --repo-type dataset
+```
+
+Register the eval with **`suite_dataset`** = `<you>/decision-index-suite-0.2` and ensure the runner has **`HF_TOKEN`** with read access. `run.sh` passes that through to `decision_index run`.
+
+### Register and smoke
+
+- Form schema: `input_param.json`. Repo URL: **this fork** (with `setup.sh` / `run.sh`), pin commit (e.g. `87d4650` + dashboard commits). `machine_type`: `n2-standard-4` for smoke.
+- **`engine=grid`**: `base_url` `https://grid.ai.juspay.net/v1` (chat completions). **`engine=http`**: systemone **origin** only, e.g. `http://host:30012` (xor servers are started outside `run.sh`).
+- First run: **`task_range` `0-9`**, **`resume` `false`**. Unset **`DECISION_INDEX_STUB`** locally so you do not hit the fake score-42 path.
+- Pass: `…_results.json` with numeric Decision Index and `additional.status: scored` (not `no-results` / value 0).
+
+See also `ONBOARDING_A_NEW_EVAL.md` (Runbook A).
+
 ## Layout
 
 ```
@@ -209,7 +256,7 @@ decision_index/
   runner.py             checkpoint/resume loop, results.jsonl rows
   pipeline.py           score + index + upload
   hf_job.py             one-job submitter (rtx-pro-6000)
-  engines/              Engine base, http, transformers, random
+  engines/              Engine base, http, grid, transformers, random
   scoring/              metrics, per-benchmark report, 0.1 index, 0.2 and 0.2.1 index (index02), new-benchmark scorer (added)
   suite/                download, verify, sample, rebuild/ (0.1 normalizers, 0.2 cut, new benchmarks)
   data/                 panels, chance levels, benchmark catalog, release-v2 and release-v2.1 subset lists

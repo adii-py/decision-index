@@ -5,8 +5,13 @@ __pycache__/
 /build/
 /dist/
 /suite/
+/suite-0.2/
 /runs/
+/output/
+/logs/
 /work/
 /hub-upload/
 .pytest_cache/
 .DS_Store
+.env
+/suite-0.2-mini-backup/
