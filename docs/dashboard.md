@@ -2,7 +2,11 @@
 
 Decision Index is a **non-agentic / API-scored** eval ([ONBOARDING_A_NEW_EVAL.md](../ONBOARDING_A_NEW_EVAL.md) §14.1). No Docker, no Artifact Registry, no harbor.
 
-## One-time: host the frozen suite (Option B)
+## Suite dataset (hosted)
+
+**Live:** [`adi060/decision-index-suite-0.2`](https://huggingface.co/datasets/adi060/decision-index-suite-0.2) (private, 150,759 scoreable rows, edition 0.2.1 hashes verified).
+
+Re-upload only if you rebuild locally:
 
 The public id `multimodalart/decision-index-suite-0.2` does not exist. Build once locally, then upload a **private** Hugging Face dataset:
 
