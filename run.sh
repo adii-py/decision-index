@@ -62,7 +62,7 @@ else
     EVAL_RUN_ID="local_$(date +%Y%m%d_%H%M%S)"
 fi
 if [ -z "$API_KEY" ]; then
-    API_KEY="${GRID_AI_API:-}"
+    API_KEY="${GRID_AI_API:-${LITE_LLM_API_KEY:-}}"
 fi
 
 MODEL=""
