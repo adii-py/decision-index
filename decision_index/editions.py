@@ -2,6 +2,8 @@ import hashlib
 import json
 from importlib import resources
 
+from decision_index.constants import HOSTED_SUITE_DATASET_0_2
+
 DEFAULT = "0.2.1"
 
 EDITIONS = {
@@ -32,7 +34,7 @@ EDITIONS = {
         panel_id="decision-index-0.2",
         headline="balanced_skill",
         suite_dir="suite-0.2",
-        dataset="multimodalart/decision-index-suite-0.2",
+        dataset=HOSTED_SUITE_DATASET_0_2,
         rows_gz_sha256="25aac5e890a54a3172c7a0c184b4cc8b9a43f10b6ee89bbad8da923be423c656",
         rows_sha256="b2b56d6fb636837ca469e689087bdbf373dda8de7638aa2da6793e6eda0792d5",
         added_sha256="7429f3c9cdddb772c1cfc42bb2a45e8516b0032152b746e6929f1c8b52f4ce89",
@@ -53,7 +55,7 @@ EDITIONS = {
         panel_id="decision-index-0.2.1",
         headline="balanced_skill",
         suite_dir="suite-0.2",
-        dataset="multimodalart/decision-index-suite-0.2",
+        dataset=HOSTED_SUITE_DATASET_0_2,
         rows_gz_sha256="25aac5e890a54a3172c7a0c184b4cc8b9a43f10b6ee89bbad8da923be423c656",
         rows_sha256="b2b56d6fb636837ca469e689087bdbf373dda8de7638aa2da6793e6eda0792d5",
         added_sha256="7429f3c9cdddb772c1cfc42bb2a45e8516b0032152b746e6929f1c8b52f4ce89",

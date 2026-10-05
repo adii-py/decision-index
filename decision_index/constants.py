@@ -1,4 +1,5 @@
 SUITE_DATASET = "multimodalart/decision-index-suite"
+HOSTED_SUITE_DATASET_0_2 = "adi060/decision-index-suite-0.2"
 SUITE_ROWS_FILE = "selected-rows.jsonl.gz"
 SUITE_EXCLUSIONS_FILE = "excluded-questions.json"
 SUITE_MANIFEST_FILE = "manifest.json"

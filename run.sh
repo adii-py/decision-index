@@ -19,6 +19,21 @@ export NO_COLOR=1
 export HF_HUB_DISABLE_XET=1
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# shellcheck disable=SC1091
+. "${SCRIPT_DIR}/scripts/dashboard_defaults.sh"
+
+load_repo_env() {
+    local env_file="${SCRIPT_DIR}/.env"
+    if [ -f "$env_file" ]; then
+        set -a
+        # shellcheck disable=SC1090
+        . "$env_file"
+        set +a
+    fi
+}
+load_repo_env
+
 log_info() { echo "[run][INFO]  $*"; }
 log_ok()   { echo "[run][OK]    $*"; }
 log_warn() { echo "[run][WARN]  $*" >&2; }
@@ -258,22 +273,31 @@ else
         suite_missing=1
     fi
     if [ -z "$SUITE_DATASET" ]; then
-        SUITE_DATASET="${DECISION_INDEX_SUITE_DATASET:-adi060/decision-index-suite-0.2}"
+        SUITE_DATASET="${DECISION_INDEX_SUITE_DATASET:-${DECISION_INDEX_SUITE_DATASET_DEFAULT}}"
     fi
     if [ "$suite_missing" -eq 1 ]; then
         log_warn "suite not present under ${SUITE_DIR} (setup.sh should have downloaded it on dashboard runs)."
         if [ -n "${EVAL_RUNNER_WORK_DIR:-}" ]; then
-            if [ -z "${HF_TOKEN:-}" ] && [ -z "${HUGGING_FACE_HUB_TOKEN:-}" ]; then
-                FAIL_REASON="HF_TOKEN must be set on the eval runner to download suite_dataset (setup.sh download failed or was skipped)"
+            log_info "retrying suite download dataset=${SUITE_DATASET} (script default; no dashboard runner secret needed)"
+            if ! "$PY" -m decision_index suite download --edition "$EDITION" --dir "$SUITE_DIR" --dataset "$SUITE_DATASET"; then
+                FAIL_REASON="suite download failed for ${SUITE_DATASET}"
                 log_err "$FAIL_REASON"
                 exit 1
             fi
-            log_info "retrying suite download dataset=${SUITE_DATASET}"
-        else
-            log_warn "Build locally: suite rebuild + suite import, or upload with scripts/prepare_hub_upload.py."
-            if [ -z "$SUITE_DATASET" ] && [ -z "${HF_TOKEN:-}" ] && [ -z "${HUGGING_FACE_HUB_TOKEN:-}" ]; then
-                log_warn "No --suite-dataset and no HF_TOKEN; download will likely fail."
+            suite_missing=0
+            for f in selected-rows.jsonl.gz excluded-questions.json manifest.json; do
+                [ -f "${SUITE_DIR}/${f}" ] || suite_missing=1
+            done
+            if [ "$EDITION" != "0.1" ] && [ ! -f "${SUITE_DIR}/added-rows.jsonl.gz" ]; then
+                suite_missing=1
             fi
+            if [ "$suite_missing" -eq 1 ]; then
+                FAIL_REASON="suite incomplete after download"
+                log_err "$FAIL_REASON"
+                exit 1
+            fi
+        else
+            log_warn "Build locally: suite rebuild + suite import, or DECISION_INDEX_DOWNLOAD_SUITE=1 in setup.sh."
         fi
     fi
 

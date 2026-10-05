@@ -202,7 +202,7 @@ The maintainers measure latency themselves, single-process on one RTX PRO 6000 u
 
 ## Eval-ops dashboard
 
-Reference kit: [apolinario/decision-index](https://github.com/apolinario/decision-index) (same CLI and suite rebuild as this repo). Dashboard entrypoints here: `setup.sh` installs a Python 3.12 venv and **downloads the frozen suite from a private Hugging Face dataset** (`HF_TOKEN` → `suite-0.2/`); `run.sh` takes `[grid_key] eval_run_id --flags`, runs the engine, scores, and writes `${EVAL_RUNNER_OUTPUT_DIR}/${eval_run_id}_results.json`. Request logs stay in `runs/<id>/`.
+Reference kit: [apolinario/decision-index](https://github.com/apolinario/decision-index) (same CLI and suite rebuild as this repo). Dashboard entrypoints here: `setup.sh` installs a Python 3.12 venv and **downloads the frozen suite** into `suite-0.2/` (dataset id in `scripts/dashboard_defaults.sh`); `run.sh` takes `[grid_key] eval_run_id --flags`, runs the engine, scores, and writes `${EVAL_RUNNER_OUTPUT_DIR}/${eval_run_id}_results.json`. Request logs stay in `runs/<id>/`. Preflight: `./scripts/verify_dashboard_config.sh`.
 
 ### Getting the suite (required before a real run)
 
@@ -236,15 +236,14 @@ hf repo create <you>/decision-index-suite-0.2 --repo-type dataset --private
 hf upload <you>/decision-index-suite-0.2 hub-upload . --repo-type dataset
 ```
 
-Register the eval with **`suite_dataset`** = `<you>/decision-index-suite-0.2` and ensure the runner has **`HF_TOKEN`** with read access. `run.sh` passes that through to `decision_index run`.
+Suite hosting is configured in **`scripts/dashboard_defaults.sh`** (`adi060/decision-index-suite-0.2`); `setup.sh` downloads it — not a dashboard form field.
 
 ### Register and smoke
 
-Full checklist: [docs/dashboard.md](docs/dashboard.md) (Runbook A §14.1 + private `suite_dataset` + runner `HF_TOKEN`).
+Full checklist: [docs/dashboard.md](docs/dashboard.md) (Runbook A §14.1).
 
-- Form schema: `input_param.json`. Repo URL: **this fork** (with `setup.sh` / `run.sh`), pin commit on `main`. `machine_type`: `n2-standard-4` for smoke.
-- **`suite_dataset`** (required): `adi060/decision-index-suite-0.2` after `scripts/upload_suite_to_hf.py`.
-- **Runner secret**: `HF_TOKEN` with read access to that dataset (not injected by default — see onboarding §3.6).
+- Run `./scripts/verify_dashboard_config.sh` locally, then paste `input_param.json` and the printed **commit SHA** into the eval row.
+- Form schema: `input_param.json`. Repo URL: **this fork**. `machine_type`: `n2-standard-4` for smoke.
 - **`engine=grid`**: `base_url` `https://grid.ai.juspay.net/v1` (chat completions). **`engine=http`**: systemone **origin** only, e.g. `http://host:30012` (xor servers are started outside `run.sh`).
 - First run: **`task_range` `0-9`**, **`resume` `false`**. Unset **`DECISION_INDEX_STUB`** locally so you do not hit the fake score-42 path.
 - Pass: `…_results.json` with numeric Decision Index and `additional.status: scored` (not `no-results` / value 0).

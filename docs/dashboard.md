@@ -2,13 +2,30 @@
 
 Decision Index is a **non-agentic / API-scored** eval ([ONBOARDING_A_NEW_EVAL.md](../ONBOARDING_A_NEW_EVAL.md) §14.1). No Docker, no Artifact Registry, no harbor.
 
-## Suite dataset (hosted)
+## Check configuration locally (before touching the dashboard)
 
-**Live:** [`adi060/decision-index-suite-0.2`](https://huggingface.co/datasets/adi060/decision-index-suite-0.2) (private, 150,759 scoreable rows, edition 0.2.1 hashes verified).
+```sh
+./scripts/verify_dashboard_config.sh
+```
+
+This validates `setup.sh`, `run.sh`, `input_param.json`, contract tests, and (when Hub allows) a suite download. It prints the **commit SHA** and **registration fields** to paste into the eval row.
+
+The dashboard database is authoritative for `input_params`; the in-repo [`input_param.json`](../input_param.json) is the reference copy — keep them in sync.
+
+## Suite dataset (hosted in scripts, not the dashboard form)
+
+**Live:** [`adi060/decision-index-suite-0.2`](https://huggingface.co/datasets/adi060/decision-index-suite-0.2) (150,759 scoreable rows, edition 0.2.1 hashes verified).
+
+Defaults live in [`scripts/dashboard_defaults.sh`](../scripts/dashboard_defaults.sh) (sourced by `setup.sh` and `run.sh`):
+
+| Setting | Default |
+|---------|---------|
+| `DECISION_INDEX_SUITE_DATASET_DEFAULT` | `adi060/decision-index-suite-0.2` |
+| `DECISION_INDEX_SUITE_EDITION_DEFAULT` | `0.2.1` |
+
+**No `suite_dataset` form field** and **no eval-runner `HF_TOKEN` secret** are required when the Hub dataset is public or anonymously readable. For a private dataset, add `HF_TOKEN` to repo `.env` for local dev only (`.env` is gitignored and not cloned on the dashboard VM — make the dataset public or use a read token in CI).
 
 Re-upload only if you rebuild locally:
-
-The public id `multimodalart/decision-index-suite-0.2` does not exist. Build once locally, then upload a **private** Hugging Face dataset:
 
 ```sh
 pip install -e ".[transformers,rebuild]"
@@ -39,34 +56,21 @@ Files on the dataset (≈79 MB): `selected-rows.jsonl.gz`, `added-rows.jsonl.gz`
 |-------|--------|
 | `name` | Decision Index |
 | `repo_url` | `https://github.com/adii-py/decision-index` |
-| `commit_sha` | pin `main` (e.g. latest with `run.sh` / `input_param.json`) |
+| `commit_sha` | output of `./scripts/verify_dashboard_config.sh` (pin, do not float `main`) |
 | `machine_type` | `n2-standard-4` (smoke); scale up for full runs |
 | `input_params` | contents of [`input_param.json`](../input_param.json) |
 
-## Runner secret (not in onboarding §3.6 — add for this eval)
+Platform-injected secrets (`GRID_AI_API`, `GITHUB_TOKEN`) are enough for a standard run. Suite download is handled in `setup.sh`.
 
-| Secret | Scope | Purpose |
-|--------|--------|---------|
-| `HF_TOKEN` | eval runner / Secret Manager | read access to `adi060/decision-index-suite-0.2` |
-
-Platform-injected secrets (`GRID_AI_API`, `GITHUB_TOKEN`) are not enough for suite download.
-
-## `setup.sh` downloads the suite (HF approach)
+## `setup.sh` downloads the suite
 
 On dashboard runs (`EVAL_RUNNER_WORK_DIR` set), **`setup.sh` runs before `run.sh`** and:
 
 1. Installs Python 3.12 + the kit (`uv venv`, `pip install -e .`)
-2. Downloads the frozen suite from Hugging Face into `suite-0.2/` using `HF_TOKEN`
+2. Downloads the frozen suite from Hugging Face into `suite-0.2/` using script defaults
 3. Verifies hashes (edition **0.2.1**)
 
-Defaults (override via runner env if needed):
-
-| Env | Default |
-|-----|---------|
-| `SUITE_DATASET` / `DECISION_INDEX_SUITE_DATASET` | `adi060/decision-index-suite-0.2` |
-| `DECISION_INDEX_SUITE_EDITION` | `0.2.1` |
-
-`run.sh` still accepts `--suite-dataset` per run; if `setup.sh` missed the download, `run.sh` retries with the same HF token.
+`run.sh` retries the same download if setup was skipped.
 
 Size: **~79 MB** download, **~800 MB** unpacked, **150,759** scoreable rows.
 
@@ -76,7 +80,6 @@ Size: **~79 MB** download, **~800 MB** unpacked, **150,759** scoreable rows.
 |-------|--------|
 | `model` | any Validate alias (form required; ignored when `engine=http`) |
 | `model_alpha` | systemone model id (e.g. `xor-1.2`) |
-| `suite_dataset` | `adi060/decision-index-suite-0.2` |
 | `engine` | `http` |
 | `base_url` | `https://grid.ai.juspay.net` |
 | `task_range` | `0-9` |

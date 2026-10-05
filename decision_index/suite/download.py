@@ -23,6 +23,13 @@ def download(directory, dataset=None, revision=None, token=None, verify=True, ed
 
     if token is None:
         token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+        if not token:
+            try:
+                from huggingface_hub import get_token
+
+                token = get_token()
+            except Exception:
+                token = None
 
     e = editions.get(edition)
     directory = Path(directory)

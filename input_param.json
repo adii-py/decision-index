@@ -15,14 +15,6 @@
       "required": true
     },
     {
-      "name": "suite_dataset",
-      "type": "text",
-      "label": "Suite dataset",
-      "description": "Private Hugging Face dataset with the frozen suite (prepare_hub_upload.py). The runner downloads this into suite-0.2/ using HF_TOKEN.",
-      "required": true,
-      "default": "adi060/decision-index-suite-0.2"
-    },
-    {
       "name": "base_url",
       "type": "text",
       "label": "Base URL",
