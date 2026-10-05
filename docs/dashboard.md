@@ -47,9 +47,28 @@ Files on the dataset (≈79 MB): `selected-rows.jsonl.gz`, `added-rows.jsonl.gz`
 
 | Secret | Scope | Purpose |
 |--------|--------|---------|
-| `HF_TOKEN` | eval runner / Secret Manager | read access to `suite_dataset` |
+| `HF_TOKEN` | eval runner / Secret Manager | read access to `adi060/decision-index-suite-0.2` |
 
 Platform-injected secrets (`GRID_AI_API`, `GITHUB_TOKEN`) are not enough for suite download.
+
+## `setup.sh` downloads the suite (HF approach)
+
+On dashboard runs (`EVAL_RUNNER_WORK_DIR` set), **`setup.sh` runs before `run.sh`** and:
+
+1. Installs Python 3.12 + the kit (`uv venv`, `pip install -e .`)
+2. Downloads the frozen suite from Hugging Face into `suite-0.2/` using `HF_TOKEN`
+3. Verifies hashes (edition **0.2.1**)
+
+Defaults (override via runner env if needed):
+
+| Env | Default |
+|-----|---------|
+| `SUITE_DATASET` / `DECISION_INDEX_SUITE_DATASET` | `adi060/decision-index-suite-0.2` |
+| `DECISION_INDEX_SUITE_EDITION` | `0.2.1` |
+
+`run.sh` still accepts `--suite-dataset` per run; if `setup.sh` missed the download, `run.sh` retries with the same HF token.
+
+Size: **~79 MB** download, **~800 MB** unpacked, **150,759** scoreable rows.
 
 ## First smoke (§14.1 A8)
 

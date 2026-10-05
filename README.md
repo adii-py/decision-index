@@ -202,7 +202,7 @@ The maintainers measure latency themselves, single-process on one RTX PRO 6000 u
 
 ## Eval-ops dashboard
 
-Reference kit: [apolinario/decision-index](https://github.com/apolinario/decision-index) (same CLI and suite rebuild as this repo). Dashboard entrypoints here: `setup.sh` installs a Python 3.12 venv; `run.sh` takes `[grid_key] eval_run_id --flags`, loads the frozen suite into `suite-0.2/` (not uploaded to GCS), runs the engine, scores, and writes `${EVAL_RUNNER_OUTPUT_DIR}/${eval_run_id}_results.json`. Request logs stay in `runs/<id>/`.
+Reference kit: [apolinario/decision-index](https://github.com/apolinario/decision-index) (same CLI and suite rebuild as this repo). Dashboard entrypoints here: `setup.sh` installs a Python 3.12 venv and **downloads the frozen suite from a private Hugging Face dataset** (`HF_TOKEN` → `suite-0.2/`); `run.sh` takes `[grid_key] eval_run_id --flags`, runs the engine, scores, and writes `${EVAL_RUNNER_OUTPUT_DIR}/${eval_run_id}_results.json`. Request logs stay in `runs/<id>/`.
 
 ### Getting the suite (required before a real run)
 

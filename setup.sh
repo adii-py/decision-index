@@ -2,6 +2,9 @@
 # setup.sh — Decision Index on the xyne-eval-ops-dashboard.
 # Runs as root inside the Debian eval-runner container. No args. cwd = repo root.
 # Non-agentic API eval: no Docker, no Artifact Registry.
+#
+# On dashboard runs (EVAL_RUNNER_WORK_DIR set), downloads the frozen suite from a
+# private Hugging Face dataset using HF_TOKEN into suite-0.2/ (~79 MB, edition 0.2.1).
 
 if [ -z "${STDBUF_APPLIED:-}" ] && command -v stdbuf >/dev/null 2>&1; then
     export STDBUF_APPLIED=1
@@ -43,4 +46,53 @@ uv pip install --python .venv/bin/python -e . || die "package install failed"
 
 log "python: $(.venv/bin/python -c 'import sys; print(sys.version.split()[0])')"
 log "uv: $(command -v uv)"
+
+SUITE_EDITION="${DECISION_INDEX_SUITE_EDITION:-0.2.1}"
+SUITE_DATASET="${SUITE_DATASET:-${DECISION_INDEX_SUITE_DATASET:-adi060/decision-index-suite-0.2}}"
+case "$SUITE_EDITION" in
+    0.1) SUITE_DIR="${SCRIPT_DIR}/suite" ;;
+    0.2|0.2.1) SUITE_DIR="${SCRIPT_DIR}/suite-0.2" ;;
+    *) die "unsupported DECISION_INDEX_SUITE_EDITION ${SUITE_EDITION}" ;;
+esac
+
+suite_ready() {
+    local missing=0
+    for f in selected-rows.jsonl.gz excluded-questions.json manifest.json; do
+        [ -f "${SUITE_DIR}/${f}" ] || missing=1
+    done
+    if [ "$SUITE_EDITION" != "0.1" ] && [ ! -f "${SUITE_DIR}/added-rows.jsonl.gz" ]; then
+        missing=1
+    fi
+    [ "$missing" -eq 0 ]
+}
+
+download_suite() {
+    local token="${HF_TOKEN:-${HUGGING_FACE_HUB_TOKEN:-}}"
+    if [ -z "$token" ]; then
+        return 1
+    fi
+    export HF_TOKEN="$token"
+    log "downloading suite dataset=${SUITE_DATASET} edition=${SUITE_EDITION} -> ${SUITE_DIR}"
+    .venv/bin/python -m decision_index suite download \
+        --edition "$SUITE_EDITION" \
+        --dir "$SUITE_DIR" \
+        --dataset "$SUITE_DATASET"
+}
+
+if suite_ready; then
+    log "suite already present under ${SUITE_DIR}"
+elif [ -n "${EVAL_RUNNER_WORK_DIR:-}" ] || [ "${DECISION_INDEX_DOWNLOAD_SUITE:-}" = "1" ]; then
+    if download_suite; then
+        suite_ready || die "suite incomplete after download"
+        log "suite download verified under ${SUITE_DIR}"
+    else
+        if [ -n "${EVAL_RUNNER_WORK_DIR:-}" ]; then
+            die "HF_TOKEN is required on dashboard runs to download ${SUITE_DATASET} (set runner secret HF_TOKEN with read access)"
+        fi
+        warn "HF_TOKEN not set; skipped suite download (set DECISION_INDEX_DOWNLOAD_SUITE=1 and HF_TOKEN to fetch)"
+    fi
+else
+    warn "suite not present under ${SUITE_DIR}; local runs need a built suite or DECISION_INDEX_DOWNLOAD_SUITE=1 + HF_TOKEN"
+fi
+
 log "setup complete"

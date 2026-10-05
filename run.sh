@@ -257,19 +257,18 @@ else
     if [ "$EDITION" != "0.1" ] && [ ! -f "${SUITE_DIR}/added-rows.jsonl.gz" ]; then
         suite_missing=1
     fi
+    if [ -z "$SUITE_DATASET" ]; then
+        SUITE_DATASET="${DECISION_INDEX_SUITE_DATASET:-adi060/decision-index-suite-0.2}"
+    fi
     if [ "$suite_missing" -eq 1 ]; then
-        log_warn "suite not present under ${SUITE_DIR}."
+        log_warn "suite not present under ${SUITE_DIR} (setup.sh should have downloaded it on dashboard runs)."
         if [ -n "${EVAL_RUNNER_WORK_DIR:-}" ]; then
-            if [ -z "$SUITE_DATASET" ]; then
-                FAIL_REASON="suite_dataset is required on dashboard runs (private HF dataset, see README Eval-ops)"
-                log_err "$FAIL_REASON"
-                exit 1
-            fi
             if [ -z "${HF_TOKEN:-}" ] && [ -z "${HUGGING_FACE_HUB_TOKEN:-}" ]; then
-                FAIL_REASON="HF_TOKEN must be set on the eval runner to download suite_dataset"
+                FAIL_REASON="HF_TOKEN must be set on the eval runner to download suite_dataset (setup.sh download failed or was skipped)"
                 log_err "$FAIL_REASON"
                 exit 1
             fi
+            log_info "retrying suite download dataset=${SUITE_DATASET}"
         else
             log_warn "Build locally: suite rebuild + suite import, or upload with scripts/prepare_hub_upload.py."
             if [ -z "$SUITE_DATASET" ] && [ -z "${HF_TOKEN:-}" ] && [ -z "${HUGGING_FACE_HUB_TOKEN:-}" ]; then
