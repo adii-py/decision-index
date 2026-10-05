@@ -34,6 +34,10 @@ load_repo_env() {
 }
 load_repo_env
 
+if [ -z "${HF_TOKEN:-}" ] && [ -z "${HUGGING_FACE_HUB_TOKEN:-}" ] && [ -n "${DECISION_INDEX_HF_TOKEN:-}" ]; then
+    export HF_TOKEN="$DECISION_INDEX_HF_TOKEN"
+fi
+
 log_info() { echo "[run][INFO]  $*"; }
 log_ok()   { echo "[run][OK]    $*"; }
 log_warn() { echo "[run][WARN]  $*" >&2; }

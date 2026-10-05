@@ -23,7 +23,14 @@ Defaults live in [`scripts/dashboard_defaults.sh`](../scripts/dashboard_defaults
 | `DECISION_INDEX_SUITE_DATASET_DEFAULT` | `adi060/decision-index-suite-0.2` |
 | `DECISION_INDEX_SUITE_EDITION_DEFAULT` | `0.2.1` |
 
-**No `suite_dataset` form field** and **no eval-runner `HF_TOKEN` secret** are required when the Hub dataset is public or anonymously readable. For a private dataset, add `HF_TOKEN` to repo `.env` for local dev only (`.env` is gitignored and not cloned on the dashboard VM — make the dataset public or use a read token in CI).
+**No `suite_dataset` form field** and **no eval-runner `HF_TOKEN` secret**. Auth for a **private** dataset is configured in the repo:
+
+| Option | Action |
+|--------|--------|
+| **A (recommended)** | Make the dataset public once: `HF_TOKEN=hf_<write> python scripts/make_hf_dataset_public.py` |
+| **B** | Set a read token in [`scripts/dashboard_defaults.sh`](../scripts/dashboard_defaults.sh): `DECISION_INDEX_HF_TOKEN=hf_<read>` and push |
+
+Local dev may also use `HF_TOKEN` in `.env` (gitignored).
 
 Re-upload only if you rebuild locally:
 

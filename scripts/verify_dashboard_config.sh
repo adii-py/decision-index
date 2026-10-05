@@ -43,12 +43,20 @@ if [ -x .venv/bin/python ]; then
 else
     PY=python3
 fi
+TOKEN="${HF_TOKEN:-${HUGGING_FACE_HUB_TOKEN:-${DECISION_INDEX_HF_TOKEN:-}}}"
+if [ -n "$TOKEN" ]; then
+    export HF_TOKEN="$TOKEN"
+    ok "HF token available for suite download (script/env)"
+else
+    warn_msg="no HF token (public dataset required, or set DECISION_INDEX_HF_TOKEN in scripts/dashboard_defaults.sh)"
+    echo "[verify] WARN $warn_msg"
+fi
 if "$PY" -m decision_index suite download --edition "${DECISION_INDEX_SUITE_EDITION_DEFAULT}" --dir /tmp/di-verify-suite --dataset "${DECISION_INDEX_SUITE_DATASET_DEFAULT}" >/tmp/di-verify-download.json 2>/tmp/di-verify-download.err; then
     ok "suite download from ${DECISION_INDEX_SUITE_DATASET_DEFAULT}"
     rm -rf /tmp/di-verify-suite /tmp/di-verify-download.json /tmp/di-verify-download.err
 else
-    bad "suite download failed (private dataset? add HF_TOKEN to .env for local verify)"
-    tail -3 /tmp/di-verify-download.err >&2 || true
+    bad "suite download failed — make dataset public (scripts/make_hf_dataset_public.py) or set DECISION_INDEX_HF_TOKEN in scripts/dashboard_defaults.sh"
+    tail -5 /tmp/di-verify-download.err >&2 || true
 fi
 
 echo

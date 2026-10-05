@@ -50,6 +50,9 @@ def main():
     for name in required:
         if name not in files:
             raise SystemExit(f"upload incomplete: {name} missing on hub")
+    if args.public:
+        api.update_repo_settings(args.repo, private=False, repo_type="dataset")
+        print(f"visibility: public (dashboard setup.sh needs no HF_TOKEN)")
     print("ok:", args.repo)
 
 

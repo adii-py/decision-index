@@ -87,13 +87,18 @@ suite_ready() {
     [ "$missing" -eq 0 ]
 }
 
+resolve_hf_token() {
+    printf '%s' "${HF_TOKEN:-${HUGGING_FACE_HUB_TOKEN:-${DECISION_INDEX_HF_TOKEN:-}}}"
+}
+
 download_suite() {
-    local token="${HF_TOKEN:-${HUGGING_FACE_HUB_TOKEN:-}}"
+    local token
+    token="$(resolve_hf_token)"
     if [ -n "$token" ]; then
         export HF_TOKEN="$token"
-        log "downloading suite (HF_TOKEN set) dataset=${SUITE_DATASET} edition=${SUITE_EDITION} -> ${SUITE_DIR}"
+        log "downloading suite (HF token from script/env) dataset=${SUITE_DATASET} edition=${SUITE_EDITION} -> ${SUITE_DIR}"
     else
-        log "downloading suite (no HF_TOKEN; public hub or cached auth) dataset=${SUITE_DATASET} edition=${SUITE_EDITION} -> ${SUITE_DIR}"
+        log "downloading suite (no HF token; needs public dataset) dataset=${SUITE_DATASET} edition=${SUITE_EDITION} -> ${SUITE_DIR}"
     fi
     .venv/bin/python -m decision_index suite download \
         --edition "$SUITE_EDITION" \
@@ -107,7 +112,7 @@ elif [ -n "${EVAL_RUNNER_WORK_DIR:-}" ] || [ "${DECISION_INDEX_DOWNLOAD_SUITE:-}
     if download_suite && suite_ready; then
         log "suite download verified under ${SUITE_DIR}"
     elif [ -n "${EVAL_RUNNER_WORK_DIR:-}" ]; then
-        die "suite download failed for ${SUITE_DATASET} (add HF_TOKEN to repo .env for private datasets, or make the dataset public)"
+        die "suite download failed for ${SUITE_DATASET}. Private dataset: set DECISION_INDEX_HF_TOKEN in scripts/dashboard_defaults.sh (read token) and push, or run: HF_TOKEN=hf_<write> python scripts/make_hf_dataset_public.py"
     else
         warn "suite download failed; set DECISION_INDEX_DOWNLOAD_SUITE=1 and optional HF_TOKEN in .env"
     fi
