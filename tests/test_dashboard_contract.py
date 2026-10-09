@@ -5,7 +5,12 @@ from pathlib import Path
 
 from decision_index.dashboard_emit import emit, token_report
 from decision_index.engines.grid import answers_from, extract_json
-from decision_index.engines.http import grid_chat_base_url, normalize_systemone_base_url
+from decision_index.engines.http import (
+    grid_chat_base_url,
+    normalize_http_response,
+    normalize_systemone_base_url,
+    systemone_path_for_model,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -22,7 +27,23 @@ def run_sh(tmp_path, *args, stub="success"):
 def test_normalize_systemone_base_url_strips_v1_suffixes():
     assert normalize_systemone_base_url("https://grid.ai.juspay.net/v1") == "https://grid.ai.juspay.net"
     assert normalize_systemone_base_url("https://grid.ai.juspay.net/v1/systemone") == "https://grid.ai.juspay.net"
+    assert normalize_systemone_base_url("https://grid.ai.juspay.net/v1/systemone-custom") == "https://grid.ai.juspay.net"
     assert grid_chat_base_url("https://grid.ai.juspay.net") == "https://grid.ai.juspay.net/v1"
+
+
+def test_systemone_custom_result_maps_to_answers():
+    questions = {"q": {"type": "choice", "criteria": {"red": "red", "blue": "blue"}}}
+    raw = {"result": {"q": "red"}, "confidence": {"q": {"mean_p": 0.99}}}
+    response = normalize_http_response(raw, questions, "/v1/systemone-custom")
+    assert response["answers"]["q"]["choice"] == "red"
+    assert response["answers"]["q"]["probabilities"]["red"] == 0.99
+
+
+def test_systemone_path_presets_for_jev_models():
+    assert systemone_path_for_model("jev-latest") == "/v1/systemone"
+    assert systemone_path_for_model("jev-trained") == "/v1/systemone-custom"
+    assert systemone_path_for_model("xor-1.2") == "/v1/systemone"
+    assert systemone_path_for_model("jev-trained", override="/v1/systemone") == "/v1/systemone"
 
 
 def test_grid_reply_parses_fenced_choice_and_noul():
@@ -148,6 +169,8 @@ def test_input_param_schema_is_json():
     by_name = {field["name"]: field for field in schema["fields"]}
     assert by_name["model"]["required"] is True
     assert by_name["model_alpha"]["required"] is True
+    assert "jev-trained" in by_name["model_alpha"]["options"]
+    assert "jev-latest" in by_name["model_alpha"]["options"]
     assert "suite_dataset" not in by_name
     assert by_name["engine"]["default"] == "http"
     assert by_name["resume"]["default"] == "false"

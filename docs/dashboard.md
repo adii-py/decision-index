@@ -86,7 +86,8 @@ Size: **~79 MB** download, **~800 MB** unpacked, **150,759** scoreable rows.
 | Field | Value |
 |-------|--------|
 | `model` | any Validate alias (form required; ignored when `engine=http`) |
-| `model_alpha` | systemone model id (e.g. `xor-1.2`) |
+| `model` | any Validate alias (Jev is not chat — e.g. `jev-latest`) |
+| `model_alpha` | `jev-latest` (`/v1/systemone`) or `jev-trained` (`/v1/systemone-custom`) |
 | `engine` | `http` |
 | `base_url` | `https://grid.ai.juspay.net` |
 | `task_range` | `0-9` |
@@ -102,6 +103,6 @@ Clear `task_range`. Expect ~150k requests; use `delay_s` 0.5 (≈120 RPM).
 
 | `engine` | Endpoint | When |
 |----------|----------|------|
-| `http` | `{origin}/v1/systemone` | systemone models (xor, etc.) — **default** |
+| `http` | `{origin}/v1/systemone` or `/v1/systemone-custom` | `jev-latest`, `xor-1.2`, …; **`jev-trained`** uses custom — **default** |
 | `grid` | `{origin}/v1/chat/completions` | chat models on Grid |
 | `random` | none | pipeline check only |

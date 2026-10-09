@@ -4,15 +4,16 @@
       "name": "model",
       "type": "text",
       "label": "Model",
-      "description": "Dashboard chat alias (Validate). Required by the form. For engine=http the systemone id is model_alpha; this field is not sent to the API.",
+      "description": "Dashboard chat alias (Validate). Required by the form. Jev models are not chat models — use any alias that passes Validate (e.g. jev-latest). For engine=http the API model is model_alpha.",
       "required": true
     },
     {
       "name": "model_alpha",
       "type": "text",
       "label": "Systemone model",
-      "description": "Model id for POST /v1/systemone when engine=http (e.g. xor-1.2). Required for http runs.",
-      "required": true
+      "description": "Model id for engine=http. jev-latest → POST /v1/systemone; jev-trained → POST /v1/systemone-custom. Other ids (e.g. xor-1.2) use /v1/systemone.",
+      "required": true,
+      "options": ["jev-latest", "jev-trained", "xor-1.2"]
     },
     {
       "name": "base_url",
@@ -26,7 +27,7 @@
       "name": "engine",
       "type": "text",
       "label": "Engine",
-      "description": "http: POST /v1/systemone (default). grid: chat completions. random: uniform baseline.",
+      "description": "http: systemone API (default). jev-trained uses /v1/systemone-custom. grid: chat completions. random: pipeline check.",
       "required": false,
       "default": "http",
       "options": ["http", "grid", "random"]

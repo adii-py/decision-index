@@ -6,7 +6,7 @@ Exceptions have meaning: `Unsupported` marks a declared capacity limit (context 
 
 ## `http`
 
-`POST {base_url}/v1/systemone` with `{"model", "state", "questions"}` and optional extra fields (`--option extra='{"samples":1}'`), bearer token from `DECISION_INDEX_API_KEY`. HTTP 400/413/422 whose body mentions a known capacity marker (`maximum context length`, `options per choice`, `context window`, ...) is `Unsupported`; other non-2xx responses raise. The response body is used as-is (minus `evaluation_trace`), so the server owns the answer format.
+`POST {base_url}/v1/systemone` with `{"model", "state", "questions"}` and optional extra fields (`--option extra='{"samples":1}'`), bearer token from `DECISION_INDEX_API_KEY`. Grid **`jev-trained`** uses `POST /v1/systemone-custom` with `context` instead of `state`; `run.sh` selects the path from `model_alpha` (override with `--systemone-path`). Custom responses (`result` + optional `confidence`) are normalized to the same `answers` shape as `/v1/systemone`. HTTP 400/413/422 whose body mentions a known capacity marker (`maximum context length`, `options per choice`, `context window`, ...) is `Unsupported`; other non-2xx responses raise.
 
 ```sh
 python -m decision_index run --engine http --option base_url=http://127.0.0.1:8000 --option model=my-model
