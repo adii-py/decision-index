@@ -112,6 +112,7 @@ def score_run_v02(suite, results, engine, out, reference=None):
         "areas": index["areas"],
         "index_benchmarks": index["benchmarks"],
         "benchmarks": benchmarks,
+        "coverage": index.get("coverage"),
         "panel_id": index["panel_id"],
         "note": index["note"],
     }

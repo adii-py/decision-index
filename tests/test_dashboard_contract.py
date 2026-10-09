@@ -77,7 +77,22 @@ def test_token_report_stays_unpriced_when_one_price_is_missing():
 
 def test_emit_requires_numeric_index(tmp_path):
     scores = tmp_path / "scores.json"
-    scores.write_text(json.dumps({"decision_index": 42, "raw_index": 7, "completed": 2, "complete": False, "counts": {"ok": 2}}))
+    scores.write_text(
+        json.dumps(
+            {
+                "decision_index": 42,
+                "raw_index": 7,
+                "completed": 2,
+                "complete": False,
+                "counts": {"ok": 2},
+                "latency_ms": {"median": 152.9, "p95": 603.8, "mean": 235.1},
+                "scores": {"balanced_skill": 42.0, "balanced_raw": 7.0, "breadth_skill": 40.0},
+                "panel_id": "decision-index-0.2.1",
+                "suite": {"edition": "release-v2.1", "scoreable": 119898},
+                "areas": [{"id": "tools", "label": "Tools", "skill": 0.1, "raw": 0.2, "coverage": 1.0, "n": 5, "benchmarks": [1]}],
+            }
+        )
+    )
     out = tmp_path / "id_results.json"
     doc = emit(
         scores,
@@ -101,9 +116,22 @@ def test_emit_requires_numeric_index(tmp_path):
     )
     assert doc["metrics"]["main"] == {"name": "Decision Index", "value": 42.0}
     saved = json.loads(out.read_text())
-    assert saved["metrics"]["secondary"]["complete"] == 0
-    assert saved["metrics"]["additional"]["row_start"] == 0
-    assert saved["metrics"]["additional"]["row_end"] == 49
+    sec = saved["metrics"]["secondary"]
+    add = saved["metrics"]["additional"]
+    assert sec["complete"] == 0
+    assert sec["balanced_skill"] == 42.0
+    assert sec["balanced_raw"] == 7.0
+    assert sec["breadth_skill"] == 40.0
+    assert sec["latency_median_ms"] == 152.9
+    assert sec["latency_p95_ms"] == 603.8
+    assert sec["latency_mean_ms"] == 235.1
+    assert sec["panel_id"] == "decision-index-0.2.1"
+    assert add["latency_ms"] == {"median": 152.9, "p95": 603.8, "mean": 235.1}
+    assert add["scores"]["breadth_skill"] == 40.0
+    assert add["suite"]["edition"] == "release-v2.1"
+    assert add["areas"][0]["label"] == "Tools"
+    assert add["row_start"] == 0
+    assert add["row_end"] == 49
 
 
 def test_emit_includes_early_stop_from_status(tmp_path):

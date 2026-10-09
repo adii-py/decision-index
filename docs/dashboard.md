@@ -95,6 +95,14 @@ Size: **~79 MB** download, **~800 MB** unpacked, **150,759** scoreable rows.
 
 Pass: `${EVAL_RUNNER_OUTPUT_DIR}/${eval_run_id}_results.json` with numeric Decision Index and `additional.status: scored`.
 
+Dashboard metrics (from `runs/<id>/scores.json` via `dashboard_emit`):
+
+| Layer | Fields |
+|-------|--------|
+| `main` | Decision Index |
+| `secondary` (flat columns) | `decision_index`, `raw_index`, `balanced_skill`, `balanced_raw`, `breadth_skill`, `latency_median_ms`, `latency_p95_ms`, `latency_mean_ms`, `coverage`, `completed`, `complete`, counts, `panel_id` |
+| `additional` | `latency_ms`, `scores`, `areas`, `suite`, `index_benchmarks`, token usage, run meta |
+
 ## Full run
 
 Clear `task_range`. Expect ~150k requests; use `delay_s` 0.5 (≈120 RPM).

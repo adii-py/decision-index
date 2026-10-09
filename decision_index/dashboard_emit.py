@@ -95,6 +95,25 @@ def token_report(attempts, input_price, output_price):
     }
 
 
+def _flat_score_metrics(scores):
+    """Headline scalars from scores.json for dashboard secondary columns (flat only)."""
+    out = {}
+    nested = scores.get("scores") or {}
+    for key in ("balanced_skill", "balanced_raw", "breadth_skill"):
+        if key in nested and not isinstance(nested[key], bool) and isinstance(nested[key], (int, float)):
+            out[key] = float(nested[key])
+    latency = scores.get("latency_ms") or {}
+    if isinstance(latency, dict):
+        for src, dst in (("median", "latency_median_ms"), ("p95", "latency_p95_ms"), ("mean", "latency_mean_ms")):
+            if src in latency and not isinstance(latency[src], bool) and isinstance(latency[src], (int, float)):
+                out[dst] = float(latency[src])
+    if "coverage" in scores and not isinstance(scores["coverage"], bool) and isinstance(scores["coverage"], (int, float)):
+        out["coverage"] = float(scores["coverage"])
+    if scores.get("panel_id"):
+        out["panel_id"] = str(scores["panel_id"])
+    return out
+
+
 def metrics_document(scores, meta, usage):
     index = scores.get("decision_index")
     if isinstance(index, bool) or not isinstance(index, (int, float)):
@@ -110,13 +129,14 @@ def metrics_document(scores, meta, usage):
         "complete": 1 if scores.get("complete") else 0,
         "edition": str(scores.get("edition") or meta.get("edition") or ""),
     }
+    secondary.update(_flat_score_metrics(scores))
     for key in ("ok", "error", "unsupported", "abstained"):
         if key in counts:
             secondary[key] = _int(counts[key])
     areas = []
     for area in scores.get("areas") or []:
         if isinstance(area, dict):
-            areas.append({k: area.get(k) for k in ("id", "skill", "raw", "coverage", "n") if k in area})
+            areas.append({k: area.get(k) for k in ("id", "label", "skill", "raw", "coverage", "n", "benchmarks") if k in area})
     additional = {
         "status": "scored",
         "engine": meta.get("engine"),
@@ -141,6 +161,16 @@ def metrics_document(scores, meta, usage):
             "random": "Uniform baseline. A pipeline check, not a model score.",
         }.get(meta.get("engine"), "Engine " + str(meta.get("engine"))),
     }
+    if isinstance(scores.get("latency_ms"), dict):
+        additional["latency_ms"] = scores["latency_ms"]
+    if isinstance(scores.get("scores"), dict):
+        additional["scores"] = scores["scores"]
+    if isinstance(scores.get("suite"), dict):
+        additional["suite"] = scores["suite"]
+    if scores.get("panel_id"):
+        additional["panel_id"] = scores["panel_id"]
+    if isinstance(scores.get("index_benchmarks"), dict):
+        additional["index_benchmarks"] = scores["index_benchmarks"]
     if usage:
         additional["token_usage"] = {k: usage[k] for k in ("observed_attempts", "measured_attempts", "coverage_pct", "input_tokens", "output_tokens", "total_tokens", "custom_cost_usd", "note")}
     return {"metrics": {"main": {"name": "Decision Index", "value": float(index)}, "secondary": secondary, "additional": additional}}
