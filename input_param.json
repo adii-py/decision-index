@@ -11,8 +11,9 @@
       "name": "model_alpha",
       "type": "text",
       "label": "Systemone model",
-      "description": "Model id for engine=http. jev-latest → POST /v1/systemone; jev-trained → POST /v1/systemone-custom. Other ids (e.g. xor-1.2) use /v1/systemone.",
+      "description": "Model id for engine=http. jev-latest → POST /v1/systemone; jev-trained → POST /v1/systemone-custom. Other ids (e.g. xor-1.2) use /v1/systemone. If the dashboard does not pass this field, run.sh defaults to jev-latest (not the chat model).",
       "required": true,
+      "default": "jev-latest",
       "options": ["jev-latest", "jev-trained", "xor-1.2"]
     },
     {

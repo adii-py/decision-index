@@ -85,9 +85,8 @@ Size: **~79 MB** download, **~800 MB** unpacked, **150,759** scoreable rows.
 
 | Field | Value |
 |-------|--------|
-| `model` | any Validate alias (form required; ignored when `engine=http`) |
-| `model` | any Validate alias (Jev is not chat — e.g. `jev-latest`) |
-| `model_alpha` | `jev-latest` (`/v1/systemone`) or `jev-trained` (`/v1/systemone-custom`) |
+| `model` | any Validate alias (e.g. `glm-5.3-flash`); **not** sent to systemone when `engine=http` |
+| `model_alpha` | `jev-latest` (default) or `jev-trained` (`/v1/systemone-custom`); if omitted, `run.sh` still uses `jev-latest` |
 | `engine` | `http` |
 | `base_url` | `https://grid.ai.juspay.net` |
 | `task_range` | `0-9` |

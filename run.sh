@@ -91,7 +91,7 @@ PRICE_OUTPUT_SET=0
 while [ $# -gt 0 ]; do
     case "$1" in
         --model) MODEL="${2:-}"; shift 2 ;;
-        --model-alpha) MODEL_ALPHA="${2:-}"; shift 2 ;;
+        --model-alpha|--model_alpha) MODEL_ALPHA="${2:-}"; shift 2 ;;
         --base-url) BASE_URL="${2:-}"; shift 2 ;;
         --task-range) TASK_RANGE="${2:-}"; shift 2 ;;
         --engine) ENGINE="${2:-}"; shift 2 ;;
@@ -227,11 +227,14 @@ fi
 
 case "$ENGINE" in
     http)
-        RUN_MODEL="${MODEL_ALPHA:-$MODEL}"
+        RUN_MODEL="${MODEL_ALPHA:-${DECISION_INDEX_MODEL_ALPHA_DEFAULT:-jev-latest}}"
         if [ -z "$RUN_MODEL" ]; then
             FAIL_REASON="model_alpha is required for engine=http (dashboard chat model is ignored)"
             log_err "$FAIL_REASON"
             exit 1
+        fi
+        if [ -z "$MODEL_ALPHA" ]; then
+            log_warn "model_alpha not set; using default systemone model ${RUN_MODEL} (dashboard model is not sent to the API)"
         fi
         ;;
     *)
@@ -250,7 +253,10 @@ if [ "$ENGINE" = "http" ]; then
     fi
 fi
 
-log_info "eval_run_id=${EVAL_RUN_ID} engine=${ENGINE} edition=${EDITION} model=${RUN_MODEL}"
+log_info "eval_run_id=${EVAL_RUN_ID} engine=${ENGINE} edition=${EDITION} systemone_model=${RUN_MODEL}"
+if [ "$ENGINE" = "http" ] && [ -n "$MODEL" ]; then
+    log_info "dashboard_model=${MODEL} (Validate alias only)"
+fi
 if [ "$ENGINE" = "http" ] && [ -n "$SYSTEMONE_PATH" ]; then
     log_info "systemone_path=${SYSTEMONE_PATH}"
 fi
@@ -425,6 +431,9 @@ EMIT_ARGS=(
     --delay-s "$DELAY_S"
     --base-url "$ORIGIN"
 )
+if [ -n "$MODEL" ]; then
+    EMIT_ARGS+=(--dashboard-model "$MODEL")
+fi
 if [ -f "${RUN_DIR}/results.jsonl" ]; then
     EMIT_ARGS+=(--results-jsonl "${RUN_DIR}/results.jsonl")
 fi

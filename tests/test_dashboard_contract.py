@@ -157,6 +157,26 @@ def test_emit_includes_early_stop_from_status(tmp_path):
     assert add["attempted_ok_rate"] == 0.6667
 
 
+def test_http_run_defaults_systemone_model_when_model_alpha_missing(tmp_path):
+    proc = run_sh(
+        tmp_path,
+        "jev-default",
+        "--engine",
+        "http",
+        "--model",
+        "glm-5.3-flash",
+        "--task-range",
+        "0-0",
+    )
+    assert proc.returncode == 0, proc.stderr + proc.stdout
+    assert "systemone_model=jev-latest" in proc.stdout
+    assert "dashboard_model=glm-5.3-flash" in proc.stdout
+    doc = json.loads((tmp_path / "out" / "jev-default_results.json").read_text())
+    assert doc["metrics"]["additional"]["systemone_model"] == "jev-latest"
+    assert doc["metrics"]["additional"]["dashboard_model"] == "glm-5.3-flash"
+    assert doc["metrics"]["additional"]["model"] == "jev-latest"
+
+
 def test_run_sh_success_honors_output_dir_and_inclusive_range(tmp_path):
     proc = run_sh(tmp_path, "run-1", "--model", "stub-model", "--task-range", "0-49", "--not-a-flag", "x")
     assert proc.returncode == 0, proc.stderr + proc.stdout
@@ -197,6 +217,7 @@ def test_input_param_schema_is_json():
     by_name = {field["name"]: field for field in schema["fields"]}
     assert by_name["model"]["required"] is True
     assert by_name["model_alpha"]["required"] is True
+    assert by_name["model_alpha"]["default"] == "jev-latest"
     assert "jev-trained" in by_name["model_alpha"]["options"]
     assert "jev-latest" in by_name["model_alpha"]["options"]
     assert "suite_dataset" not in by_name

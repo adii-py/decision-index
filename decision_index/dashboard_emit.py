@@ -141,6 +141,8 @@ def metrics_document(scores, meta, usage):
         "status": "scored",
         "engine": meta.get("engine"),
         "model": meta.get("model"),
+        "dashboard_model": meta.get("dashboard_model") or "",
+        "systemone_model": meta.get("systemone_model") or meta.get("model") or "",
         "task_range": meta.get("task_range") or "",
         "row_start": meta.get("row_start"),
         "row_end": meta.get("row_end"),
@@ -262,6 +264,7 @@ def main(argv=None):
     parser.add_argument("--out", required=True)
     parser.add_argument("--token-dir")
     parser.add_argument("--model", default="")
+    parser.add_argument("--dashboard-model", default="")
     parser.add_argument("--engine", default="")
     parser.add_argument("--edition", default="")
     parser.add_argument("--task-range", default="")
@@ -284,6 +287,8 @@ def main(argv=None):
         args.out,
         {
             "model": args.model,
+            "systemone_model": args.model,
+            "dashboard_model": args.dashboard_model,
             "engine": args.engine,
             "edition": args.edition,
             "task_range": args.task_range,

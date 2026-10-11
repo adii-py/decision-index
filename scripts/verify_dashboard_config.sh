@@ -79,7 +79,7 @@ Suite hosting is NOT a dashboard field:
 
 First smoke run (form):
   model:       any Validate alias (ignored when engine=http)
-  model_alpha: your systemone id (e.g. xor-1.2)
+  model_alpha: jev-latest (default) or jev-trained / xor-1.2
   engine:      http
   task_range:  0-9
   resume:      false
