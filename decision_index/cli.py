@@ -89,6 +89,7 @@ def cmd_run(args):
                 row_start=args.row_start,
                 row_end=args.row_end,
                 delay_s=args.delay_s,
+                concurrency=args.concurrency,
                 logs_dir=args.logs_dir,
                 compact=args.compact,
                 resume=not args.fresh,
@@ -214,6 +215,7 @@ def build_parser():
     p.add_argument("--row-start", type=int, help="inclusive suite row index to start from")
     p.add_argument("--row-end", type=int, help="inclusive suite row index to stop at")
     p.add_argument("--delay-s", type=float, default=0.0, help="sleep between requests (rate limiting)")
+    p.add_argument("--concurrency", type=int, default=1, help="requests in flight at once (thread-safe engines: http, grid)")
     p.add_argument("--logs-dir", help="write per-case JSON and ledger.jsonl here")
     p.add_argument("--compact", action="store_true", help="omit payload and raw_output from results rows")
     p.add_argument("--fresh", action="store_true", help="ignore an existing results.jsonl")

@@ -52,11 +52,20 @@
     {
       "name": "delay_s",
       "type": "number",
-      "label": "Delay between requests (seconds)",
-      "description": "Rate limit sleep between API calls (default 0.5s ≈ 120 RPM).",
+      "label": "Pause after each request (seconds)",
+      "description": "Pause after each request, per parallel worker. 0 = no pause; use concurrency to set throughput.",
       "required": false,
-      "default": 0.5,
+      "default": 0,
       "constraints": {"min": 0, "max": 60}
+    },
+    {
+      "name": "concurrency",
+      "type": "number",
+      "label": "Parallel requests",
+      "description": "Requests in flight at once (1-20). 20 finishes the full suite in about 1.2h at ~570ms latency (set Runtime to 3h); lower it if the server or key cannot take the load. HTTP 429/502/503/504 are retried 3 times with backoff.",
+      "required": false,
+      "default": 20,
+      "constraints": {"min": 1, "max": 20}
     },
     {
       "name": "timeout",

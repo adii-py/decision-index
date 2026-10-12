@@ -5,8 +5,11 @@
 # engine=http (default): POST {base_url}/v1/systemone (or /v1/systemone-custom for jev-trained)
 # with model_alpha; the dashboard chat model is ignored. base_url defaults to
 # https://grid.ai.juspay.net; trailing /v1, /v1/systemone, or /v1/systemone-custom is stripped.
-# Early stop on HTTP 401/403/429 or 3 consecutive request errors
-# completes with partial results (ended_abruptly=1). Only a run that never starts is FAILED.
+# Requests run --concurrency at a time (default 20). HTTP 429/502/503/504 and dropped
+# connections are retried 3 times with backoff; after that 401/403/429 or 3 consecutive
+# request errors end the run early with partial results (ended_abruptly=1). Only a run
+# that never starts is FAILED. Reports (decision_index_report.html and siblings) are
+# written next to the results JSON and never fail the run.
 
 if [ -z "${STDBUF_APPLIED:-}" ] && command -v stdbuf >/dev/null 2>&1; then
     export STDBUF_APPLIED=1
@@ -78,7 +81,8 @@ TASK_RANGE=""
 ENGINE="http"
 EDITION="0.2.1"
 TIMEOUT="600"
-DELAY_S="0.5"
+DELAY_S="0"
+CONCURRENCY="20"
 RESUME="true"
 SUITE_DATASET=""
 INPUT_TOKEN_PRICE=""
@@ -98,6 +102,7 @@ while [ $# -gt 0 ]; do
         --edition) EDITION="${2:-}"; shift 2 ;;
         --timeout) TIMEOUT="${2:-}"; shift 2 ;;
         --delay-s) DELAY_S="${2:-}"; shift 2 ;;
+        --concurrency) CONCURRENCY="${2:-}"; shift 2 ;;
         --resume) RESUME="${2:-true}"; shift 2 ;;
         --suite-dataset) SUITE_DATASET="${2:-}"; shift 2 ;;
         --systemone-path) SYSTEMONE_PATH="${2:-}"; shift 2 ;;
@@ -120,6 +125,11 @@ while [ $# -gt 0 ]; do
 done
 
 ORIGIN="$(normalize_base_url "$BASE_URL")"
+CONCURRENCY="${CONCURRENCY%%.*}"
+if ! [[ "$CONCURRENCY" =~ ^[0-9]+$ ]] || [ "$CONCURRENCY" -lt 1 ]; then
+    log_warn "concurrency '${CONCURRENCY}' is not a positive integer; using 1"
+    CONCURRENCY=1
+fi
 case "$ENGINE" in
     http)
         ENGINE_BASE="$ORIGIN"
@@ -260,7 +270,7 @@ fi
 if [ "$ENGINE" = "http" ] && [ -n "$SYSTEMONE_PATH" ]; then
     log_info "systemone_path=${SYSTEMONE_PATH}"
 fi
-log_info "base_url=${ENGINE_BASE} origin=${ORIGIN} timeout=${TIMEOUT} delay_s=${DELAY_S} resume=${RESUME} row_range=${ROW_START:-full}-${ROW_END:-full}"
+log_info "base_url=${ENGINE_BASE} origin=${ORIGIN} timeout=${TIMEOUT} delay_s=${DELAY_S} concurrency=${CONCURRENCY} resume=${RESUME} row_range=${ROW_START:-full}-${ROW_END:-full}"
 
 case "$ENGINE" in
     grid|http|random) ;;
@@ -364,6 +374,7 @@ else
         --out "$RUN_DIR" \
         --compact \
         --delay-s "$DELAY_S" \
+        --concurrency "$CONCURRENCY" \
         --logs-dir "$LOGS_DIR" \
         ${VERIFY_ARGS[@]+"${VERIFY_ARGS[@]}"} \
         ${FRESH[@]+"${FRESH[@]}"} \
@@ -429,6 +440,7 @@ EMIT_ARGS=(
     --range-note "$RANGE_NOTE"
     --run-rc "${RUN_RC}"
     --delay-s "$DELAY_S"
+    --concurrency "$CONCURRENCY"
     --base-url "$ORIGIN"
 )
 if [ -n "$MODEL" ]; then
@@ -457,6 +469,14 @@ fi
     log_err "$FAIL_REASON"
     exit 1
 }
+
+log_step "Writing reports"
+"$PY" -m decision_index.report \
+    --run-dir "$RUN_DIR" \
+    --results-json "$RESULTS_FILE" \
+    --run-id "$EVAL_RUN_ID" \
+    --out-dir "$OUTPUT_ROOT" \
+    || log_warn "report generation failed (non-fatal); the results JSON is unaffected"
 
 trap - EXIT
 if [ -n "${HB_PID}" ]; then

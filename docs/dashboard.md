@@ -100,11 +100,13 @@ Dashboard metrics (from `runs/<id>/scores.json` via `dashboard_emit`):
 |-------|--------|
 | `main` | Decision Index |
 | `secondary` (flat columns) | `decision_index`, `raw_index`, `balanced_skill`, `balanced_raw`, `breadth_skill`, `latency_median_ms`, `latency_p95_ms`, `latency_mean_ms`, `coverage`, `completed`, `complete`, counts, `panel_id` |
-| `additional` | `latency_ms`, `scores`, `areas`, `suite`, `index_benchmarks`, token usage, run meta |
+| `additional` | `latency_ms`, `scores`, `areas`, `suite`, `index_benchmarks`, token usage, `concurrency`, `run_health`, run meta |
 
 ## Full run
 
-Clear `task_range`. Expect ~150k requests; use `delay_s` 0.5 (≈120 RPM).
+Clear `task_range`. Expect ~150k requests. `concurrency` (default 20, max 20) sets parallel requests: at ~570ms latency 20 finishes in ~1.2h (set Runtime to 3h), 10 in ~2.4h, 1 in ~24h. HTTP 429/502/503/504 and dropped connections are retried 3 times with backoff (`Retry-After`, else 5s, 10s, 20s).
+
+Reports in `output/` (non-fatal, written after the results JSON): `decision_index_report.html` (index, areas, per-benchmark skill and coverage, failures, latency, throughput timeline, run configuration), `decision_index_report.md`, `decision_index_analysis.json`, `decision_index_benchmarks.csv`, plus `token_usage.*`.
 
 ## Engine (F34)
 

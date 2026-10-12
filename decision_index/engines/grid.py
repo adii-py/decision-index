@@ -68,6 +68,7 @@ def usage_from(raw):
 
 class GridChat(Engine):
     name = "grid"
+    thread_safe = True
     latency = "HTTP request wall time against the OpenAI-compatible chat completions endpoint; excludes server startup."
 
     def __init__(self, base_url=None, model="default", token_env="OPENAI_API_KEY", timeout=600, **options):

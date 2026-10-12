@@ -56,3 +56,27 @@ def test_random_engine_round_trip():
     response, _ = e("state", q)
     validate(q, response)
     assert json.dumps(response)
+
+
+def test_network_engines_are_marked_thread_safe():
+    from decision_index.engines.base import Engine, RandomEngine
+    from decision_index.engines.grid import GridChat
+    from decision_index.engines.http import HttpSystemOne
+
+    assert Engine.thread_safe is False and RandomEngine.thread_safe is False
+    assert HttpSystemOne.thread_safe is True and GridChat.thread_safe is True
+
+
+def test_systemone_429_carries_retry_after():
+    import httpx
+
+    from decision_index.engines.http import HttpStop, HttpSystemOne
+
+    engine = HttpSystemOne(base_url="https://example.test", model="jev-latest")
+    engine.client = httpx.Client(
+        base_url="https://example.test",
+        transport=httpx.MockTransport(lambda request: httpx.Response(429, headers={"retry-after": "7"}, text="slow down")),
+    )
+    with pytest.raises(HttpStop) as caught:
+        engine("state", {"q": {"type": "choice", "criteria": {"a": "a", "b": "b"}}})
+    assert caught.value.status_code == 429 and caught.value.retry_after == "7"

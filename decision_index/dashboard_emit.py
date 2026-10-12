@@ -11,6 +11,7 @@ import json
 import os
 from pathlib import Path
 
+from decision_index.analysis import read_attempts, run_health
 from decision_index.suite.io import read_jsonl
 
 
@@ -114,7 +115,7 @@ def _flat_score_metrics(scores):
     return out
 
 
-def metrics_document(scores, meta, usage):
+def metrics_document(scores, meta, usage, health=None):
     index = scores.get("decision_index")
     if isinstance(index, bool) or not isinstance(index, (int, float)):
         raise ValueError("scores.json decision_index is not a number")
@@ -149,6 +150,7 @@ def metrics_document(scores, meta, usage):
         "range_note": meta.get("range_note") or "",
         "base_url": meta.get("base_url") or "",
         "delay_s": meta.get("delay_s"),
+        "concurrency": meta.get("concurrency"),
         "run_rc": meta.get("run_rc"),
         "ended_abruptly": meta.get("ended_abruptly") or 0,
         "stop_reason": meta.get("stop_reason") or "",
@@ -173,6 +175,8 @@ def metrics_document(scores, meta, usage):
         additional["panel_id"] = scores["panel_id"]
     if isinstance(scores.get("index_benchmarks"), dict):
         additional["index_benchmarks"] = scores["index_benchmarks"]
+    if health:
+        additional["run_health"] = health
     if usage:
         additional["token_usage"] = {k: usage[k] for k in ("observed_attempts", "measured_attempts", "coverage_pct", "input_tokens", "output_tokens", "total_tokens", "custom_cost_usd", "note")}
     return {"metrics": {"main": {"name": "Decision Index", "value": float(index)}, "secondary": secondary, "additional": additional}}
@@ -246,7 +250,14 @@ def emit(scores_path, results_path, out_path, meta, input_price, output_price, t
     report = token_report(attempts, input_price, output_price)
     if token_dir and attempts:
         write_token_artifacts(token_dir, report)
-    document = metrics_document(scores, merge_stop_meta(meta, load_status(status_path)), report if attempts else None)
+    health = None
+    if results_path:
+        try:
+            final, spans = read_attempts(results_path)
+            health = run_health(final, spans) if spans else None
+        except (OSError, ValueError):
+            health = None
+    document = metrics_document(scores, merge_stop_meta(meta, load_status(status_path)), report if attempts else None, health)
     atomic_write(out_path, json.dumps(document, indent=2) + "\n")
     return document
 
@@ -273,6 +284,7 @@ def main(argv=None):
     parser.add_argument("--range-note", default="")
     parser.add_argument("--base-url", default="")
     parser.add_argument("--delay-s", default="")
+    parser.add_argument("--concurrency", default="")
     parser.add_argument("--status")
     parser.add_argument("--run-rc", type=int, default=0)
     parser.add_argument("--input-token-price", default=None)
@@ -281,6 +293,7 @@ def main(argv=None):
     row_start = int(args.row_start) if args.row_start != "" else None
     row_end = int(args.row_end) if args.row_end != "" else None
     delay_s = float(args.delay_s) if args.delay_s != "" else None
+    concurrency = int(float(args.concurrency)) if args.concurrency != "" else None
     emit(
         args.scores,
         args.results_jsonl,
@@ -297,6 +310,7 @@ def main(argv=None):
             "range_note": args.range_note,
             "base_url": args.base_url,
             "delay_s": delay_s,
+            "concurrency": concurrency,
             "run_rc": args.run_rc,
         },
         _optional_price(args.input_token_price),

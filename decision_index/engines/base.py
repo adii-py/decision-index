@@ -41,6 +41,7 @@ class Engine:
     name = "engine"
     provenance = {}
     latency = "In-process request wall time including prompt construction; excludes model loading."
+    thread_safe = False
 
     def __init__(self, **options):
         self.options = options

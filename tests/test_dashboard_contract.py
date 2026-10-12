@@ -225,3 +225,43 @@ def test_input_param_schema_is_json():
     assert by_name["resume"]["default"] == "false"
     assert "delay_s" in by_name
     assert "input_token_price" in by_name and "output_token_price" in by_name
+    assert by_name["concurrency"]["default"] == 20
+    assert by_name["concurrency"]["constraints"] == {"min": 1, "max": 20}
+    assert by_name["delay_s"]["default"] == 0
+
+
+REPORT_FILES = ("decision_index_report.html", "decision_index_report.md", "decision_index_analysis.json", "decision_index_benchmarks.csv")
+
+
+def test_emit_reports_concurrency_and_run_health(tmp_path):
+    scores = tmp_path / "scores.json"
+    scores.write_text(json.dumps({"decision_index": 10, "completed": 2, "counts": {"ok": 2}}))
+    results = tmp_path / "results.jsonl"
+    rows = [
+        {"run_id": "a", "status": "ok", "started_utc": "2026-10-12T00:00:00+00:00", "completed_utc": "2026-10-12T00:00:30+00:00", "total_wall_ms": 500.0},
+        {"run_id": "b", "status": "ok", "retries": ["http_429"], "started_utc": "2026-10-12T00:00:30+00:00", "completed_utc": "2026-10-12T00:01:00+00:00", "total_wall_ms": 400.0},
+    ]
+    results.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    meta = {"engine": "http", "model": "m", "edition": "0.2.1", "run_rc": 0, "concurrency": 20}
+    doc = emit(scores, results, tmp_path / "id_results.json", meta, None, None, None)
+    add = doc["metrics"]["additional"]
+    assert add["concurrency"] == 20
+    assert add["run_health"] == {"attempts": 2, "wall_seconds": 60.0, "requests_per_minute": 2.0, "retried_rows": 1, "retries_exhausted": 0}
+
+
+def test_run_sh_accepts_concurrency_and_writes_reports(tmp_path):
+    proc = run_sh(tmp_path, "run-c", "--model", "stub-model", "--concurrency", "12", "--task-range", "0-9")
+    assert proc.returncode == 0, proc.stderr + proc.stdout
+    assert "ignoring unknown flag: --concurrency" not in proc.stderr
+    assert "concurrency=12" in proc.stdout
+    doc = json.loads((tmp_path / "out" / "run-c_results.json").read_text())
+    assert doc["metrics"]["additional"]["concurrency"] == 12
+    for name in REPORT_FILES:
+        assert (tmp_path / "out" / name).is_file(), name
+
+
+def test_run_sh_normalizes_dashboard_concurrency_values(tmp_path):
+    as_float = run_sh(tmp_path, "run-d", "--model", "stub-model", "--concurrency", "20.0")
+    assert as_float.returncode == 0 and "concurrency=20 " in as_float.stdout
+    junk = run_sh(tmp_path, "run-e", "--model", "stub-model", "--concurrency", "zero")
+    assert junk.returncode == 0 and "concurrency=1 " in junk.stdout and "not a positive integer" in junk.stderr

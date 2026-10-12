@@ -21,9 +21,10 @@ STOP_STATUS_CODES = frozenset({401, 403, 429})
 class HttpStop(RuntimeError):
     """HTTP response that should end the run early but keep partial results."""
 
-    def __init__(self, status_code, message=""):
+    def __init__(self, status_code, message="", retry_after=None):
         self.status_code = int(status_code)
         self.message = message
+        self.retry_after = retry_after
         super().__init__(f"HTTP {status_code}: {message[:500]}")
 
 
@@ -100,6 +101,7 @@ def normalize_http_response(raw, questions, systemone_path):
 
 class HttpSystemOne(Engine):
     name = "http"
+    thread_safe = True
     latency = "HTTP request wall time against the configured /v1/systemone endpoint, including server-side prompt construction and inference; excludes server startup."
 
     def __init__(
@@ -146,7 +148,7 @@ class HttpSystemOne(Engine):
     def __call__(self, state, questions):
         r = self.client.post(self.systemone_path, json=self._request_body(state, questions))
         if r.status_code in STOP_STATUS_CODES:
-            raise HttpStop(r.status_code, r.text)
+            raise HttpStop(r.status_code, r.text, retry_after=r.headers.get("retry-after"))
         if r.status_code in (400, 413, 422):
             message = r.text
             if any(s in message for s in CAPACITY_MARKERS):
