@@ -59,6 +59,7 @@ def test_decisions_engine_posts_model_state_and_questions(monkeypatch):
     validate(questions, response)
     assert seen == {"host": "grid.ai.juspay.net", "path": "/v1/decisions", "auth": "Bearer sk-test", "body": {"model": "xor-latest", "questions": questions, "state": state}}
     assert response["answers"]["when"]["choice"] == "later" and raw["usage"]["output_tokens"] == 2
+    assert response["model"] == "xor-latest" and response["usage"] == {"input_tokens": 120, "output_tokens": 2}
     assert engine.provenance["decisions_path"] == "/v1/decisions"
 
 
@@ -293,3 +294,10 @@ def test_dashboard_entrypoints_no_longer_reference_systemone():
     for name in ("input_param.json", "run.sh", "scripts/dashboard_defaults.sh", "scripts/verify_dashboard_config.sh"):
         text = (ROOT / name).read_text().lower()
         assert "systemone" not in text and "jev-trained" not in text, name
+
+
+def test_decisions_response_keeps_model_and_usage_for_token_report():
+    answers = {"q": {"type": "noul", "noul": 0.4}}
+    openai_style = {"model": "xor-latest", "answers": answers, "usage": {"prompt_tokens": 210, "completion_tokens": 3}}
+    assert normalize_http_response(openai_style) == {"model": "xor-latest", "answers": answers, "usage": {"input_tokens": 210, "output_tokens": 3}}
+    assert normalize_http_response({"answers": answers}) == {"answers": answers}

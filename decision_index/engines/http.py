@@ -1,7 +1,7 @@
 import os
 import re
 
-from decision_index.engines.base import Engine, Unsupported
+from decision_index.engines.base import Engine, Unsupported, usage_from
 
 CAPACITY_MARKERS = (
     "options per choice",
@@ -45,9 +45,16 @@ def grid_chat_base_url(base_url):
 
 
 def normalize_http_response(raw):
-    if isinstance(raw, dict) and isinstance(raw.get("answers"), dict):
-        return {"answers": raw["answers"]}
-    raise ValueError("unexpected /v1/decisions response shape")
+    # Keep model and usage beside answers: the token/cost report reads response.usage.
+    if not (isinstance(raw, dict) and isinstance(raw.get("answers"), dict)):
+        raise ValueError("unexpected /v1/decisions response shape")
+    response = {"answers": raw["answers"]}
+    if isinstance(raw.get("model"), str):
+        response["model"] = raw["model"]
+    usage = usage_from(raw)
+    if usage:
+        response["usage"] = usage
+    return response
 
 
 class HttpDecisions(Engine):

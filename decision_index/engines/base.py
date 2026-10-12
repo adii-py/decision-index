@@ -17,6 +17,18 @@ def text(x):
     return x if isinstance(x, str) else json.dumps(x, ensure_ascii=False, separators=(",", ":"))
 
 
+def usage_from(raw):
+    usage = (raw or {}).get("usage") or {}
+    prompt = usage.get("prompt_tokens", usage.get("input_tokens"))
+    completion = usage.get("completion_tokens", usage.get("output_tokens"))
+    out = {}
+    if isinstance(prompt, int) and not isinstance(prompt, bool):
+        out["input_tokens"] = prompt
+    if isinstance(completion, int) and not isinstance(completion, bool):
+        out["output_tokens"] = completion
+    return out or None
+
+
 def validate(questions, response):
     if set(response.get("answers", {})) != set(questions):
         raise ValueError("Question keys mismatch")

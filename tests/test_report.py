@@ -2,7 +2,7 @@ import csv
 import io
 import json
 
-from decision_index.analysis import analyze, read_attempts, run_health, timeline
+from decision_index.analysis import analyze, benchmark_rows, read_attempts, run_health, timeline
 from decision_index.report import CSV_COLUMNS, CSV_FILE, HTML_FILE, JSON_FILE, MD_FILE, benchmarks_csv, main, render_html, render_md, write_reports
 
 
@@ -20,10 +20,10 @@ def make_run(tmp_path, benchmarks=3):
         "suite": {"scoreable": 119898, "added_requests": 30419},
         "areas": [{"id": "tools", "label": "Tools & Automation", "skill": 0.42, "raw": 0.55, "coverage": 0.9, "n": benchmarks, "benchmarks": list(range(1, benchmarks + 1))}],
         "benchmarks": {
-            str(n): {"catalog_id": n, "dataset": f"Bench{n}", "requests": 10, "answered": 0 if n == 2 else 10, "errors": 0, "unsupported": 1 if n == 3 else 0, "abstained": 0, "pending": 0, "metric": "accuracy", "score": 0.5, "median_ms": 400.0}
+            str(n): {"catalog_id": n, "dataset": f"Bench{n}", "requests": 10, "answered": 0 if n == 2 else 10, "errors": 0, "unsupported": 1 if n == 3 else 0, "abstained": 0, "pending": 0, "metric": "accuracy", "score": 0.2 if n == 3 else 0.5, "median_ms": 400.0}
             for n in range(1, benchmarks + 1)
         },
-        "index_benchmarks": {str(n): {"raw": 0.5, "skill": 0.0 if n == 3 else 0.4, "coverage": 0.9 if n == 3 else 1.0, "random": 0.25, "in_index": True} for n in range(1, benchmarks + 1)},
+        "index_benchmarks": {str(n): {"raw": 0.18 if n == 3 else 0.5, "skill": 0.0 if n == 3 else 0.4, "coverage": 0.9 if n == 3 else 1.0, "random": 0.25, "rule": "chance", "in_index": True} for n in range(1, benchmarks + 1)},
         "note": "test note",
     }
     (run / "scores.json").write_text(json.dumps(scores))
@@ -144,3 +144,22 @@ def test_write_reports_and_main_write_four_files(tmp_path):
     assert json.loads((tmp_path / "out" / JSON_FILE).read_text(encoding="utf-8"))["run_id"] == "r1"
     main(["--run-dir", str(run), "--out-dir", str(tmp_path / "cli"), "--run-id", "r2"])
     assert json.loads((tmp_path / "cli" / JSON_FILE).read_text(encoding="utf-8"))["run_id"] == "r2"
+
+
+def test_below_chance_ignores_skill_lost_to_coverage():
+    scores = {
+        "benchmarks": {
+            "1": {"dataset": "BFCL", "requests": 1694, "answered": 400, "score": 1.0},
+            "48": {"dataset": "ForecastBench", "requests": 100, "answered": 30, "score": 0.31},
+            "24": {"dataset": "MMLU", "requests": 100, "answered": 100, "score": 0.2},
+        },
+        "index_benchmarks": {
+            "1": {"raw": 0.2361, "skill": 0.0, "coverage": 0.2361, "random": 0.259, "rule": "chance", "in_index": True},
+            "48": {"raw": 0.0, "skill": 0.0, "coverage": 0.3, "random": 0.25, "rule": "vs baseline", "in_index": True},
+            "24": {"raw": 0.2, "skill": 0.0, "coverage": 1.0, "random": 0.25, "rule": "chance", "in_index": True},
+        },
+    }
+    rows = {b["catalog_id"]: b for b in benchmark_rows(scores, {}, {})}
+    assert rows[1]["flags"] == ["low coverage"]
+    assert rows[48]["flags"] == ["below chance", "low coverage"]
+    assert rows[24]["flags"] == ["below chance"]

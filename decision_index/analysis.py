@@ -174,6 +174,23 @@ def failures(final):
     }
 
 
+def _below_chance(ib, skill):
+    """True when the answers themselves are no better than chance.
+
+    Skill is coverage-weighted, so a partial run scores 0 even with perfect answers. Under the
+    "vs baseline" rule skill 0 already means "no better than the baseline"; otherwise compare
+    the coverage-free score (raw / coverage) with chance, and do not flag what cannot be shown.
+    """
+    if skill != 0:
+        return False
+    if ib.get("rule") == "vs baseline":
+        return True
+    raw, coverage, chance = _number(ib.get("raw")), _number(ib.get("coverage")), _number(ib.get("random"))
+    if raw is None or not coverage or chance is None:
+        return False
+    return raw / coverage <= chance
+
+
 def benchmark_rows(scores, per_latency, datasets):
     native = scores.get("benchmarks") or {}
     index = scores.get("index_benchmarks") or {}
@@ -193,7 +210,7 @@ def benchmark_rows(scores, per_latency, datasets):
         flags = []
         if not answered:
             flags.append("no answers")
-        elif in_index and skill == 0:
+        elif in_index and _below_chance(ib, skill):
             flags.append("below chance")
         if answered and coverage is not None and coverage < LOW_COVERAGE:
             flags.append("low coverage")

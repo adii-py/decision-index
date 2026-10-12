@@ -1,7 +1,7 @@
 import json
 import os
 
-from decision_index.engines.base import Engine, Unsupported
+from decision_index.engines.base import Engine, Unsupported, usage_from
 from decision_index.engines.http import CAPACITY_MARKERS, grid_chat_base_url
 
 SYSTEM = (
@@ -52,18 +52,6 @@ def answers_from(payload, questions):
         else:
             raise Unsupported("Unsupported question type " + str(question["type"]))
     return answers
-
-
-def usage_from(raw):
-    usage = (raw or {}).get("usage") or {}
-    prompt = usage.get("prompt_tokens", usage.get("input_tokens"))
-    completion = usage.get("completion_tokens", usage.get("output_tokens"))
-    out = {}
-    if isinstance(prompt, int) and not isinstance(prompt, bool):
-        out["input_tokens"] = prompt
-    if isinstance(completion, int) and not isinstance(completion, bool):
-        out["output_tokens"] = completion
-    return out or None
 
 
 class GridChat(Engine):
