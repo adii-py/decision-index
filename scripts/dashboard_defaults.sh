@@ -9,13 +9,8 @@ DECISION_INDEX_SUITE_DATASET_DEFAULT="${DECISION_INDEX_SUITE_DATASET_DEFAULT:-ad
 # Optional read-only Hugging Face token (leave empty when the dataset is public).
 DECISION_INDEX_HF_TOKEN="${DECISION_INDEX_HF_TOKEN:-}"
 
-# Default systemone model when the dashboard omits model_alpha (engine=http).
-DECISION_INDEX_MODEL_ALPHA_DEFAULT="${DECISION_INDEX_MODEL_ALPHA_DEFAULT:-jev-latest}"
+# Default model when the dashboard omits model_alpha (engine=http).
+DECISION_INDEX_MODEL_ALPHA_DEFAULT="${DECISION_INDEX_MODEL_ALPHA_DEFAULT:-xor-latest}"
 
-# Grid systemone routes (engine=http). Override with --systemone-path on run.sh.
-default_systemone_path() {
-    case "${1:-}" in
-        jev-trained) printf '%s' "/v1/systemone-custom" ;;
-        jev-latest|*) printf '%s' "/v1/systemone" ;;
-    esac
-}
+# Grid decisions route (engine=http). Override with --decisions-path on run.sh.
+DECISION_INDEX_DECISIONS_PATH_DEFAULT="${DECISION_INDEX_DECISIONS_PATH_DEFAULT:-/v1/decisions}"

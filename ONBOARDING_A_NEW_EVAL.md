@@ -1827,7 +1827,7 @@ This is the graveyard. Every entry is a real incident from one of the four integ
 
 **F34 — a typed-decision benchmark is wired at Grid `/v1` and every request 404s.**
 - Root cause: the kit's `http` engine posts `{origin}/v1/systemone`. Grid's OpenAI base is already `…/v1`, so that path does not exist, and a chat model does not speak systemone.
-- Fix: `engine=grid` posts `{base_url}/chat/completions` and parses a JSON map of question key → option key or noul probability (`decision_index/engines/grid.py`). Keep `engine=http` only when `base_url` is a systemone origin.
+- Fix: `engine=grid` posts `{base_url}/chat/completions` and parses a JSON map of question key → option key or noul probability (`decision_index/engines/grid.py`). Keep `engine=http` only when `base_url` is a decisions origin (`POST /v1/decisions`).
 - Prevention: the dashboard schema's engine field lists `grid` (default), `http`, and `random`, and the base_url description says which shape each engine expects.
 
 **F31 — cline produces a patch but "writes no logs".**

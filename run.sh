@@ -2,9 +2,9 @@
 # run.sh — Decision Index entrypoint for the xyne-eval-ops-dashboard.
 # Args: [GRID_AI_KEY] EVAL_RUN_ID --flags
 #
-# engine=http (default): POST {base_url}/v1/systemone (or /v1/systemone-custom for jev-trained)
-# with model_alpha; the dashboard chat model is ignored. base_url defaults to
-# https://grid.ai.juspay.net; trailing /v1, /v1/systemone, or /v1/systemone-custom is stripped.
+# engine=http (default): POST {base_url}/v1/decisions with model_alpha (default xor-latest);
+# the dashboard chat model is ignored. base_url defaults to https://grid.ai.juspay.net;
+# a trailing /v1 or /v1/decisions is stripped.
 # Requests run --concurrency at a time (default 20). HTTP 429/502/503/504 and dropped
 # connections are retried 3 times with backoff; after that 401/403/429 or 3 consecutive
 # request errors end the run early with partial results (ended_abruptly=1). Only a run
@@ -51,8 +51,7 @@ log_step() { echo; echo "===== $* ====="; }
 normalize_base_url() {
     local url="${1%/}"
     case "$url" in
-        */v1/systemone-custom) url="${url%/v1/systemone-custom}" ;;
-        */v1/systemone) url="${url%/v1/systemone}" ;;
+        */v1/decisions) url="${url%/v1/decisions}" ;;
         */v1) url="${url%/v1}" ;;
     esac
     printf '%s' "$url"
@@ -88,7 +87,7 @@ SUITE_DATASET=""
 INPUT_TOKEN_PRICE=""
 OUTPUT_TOKEN_PRICE=""
 NO_VERIFY="false"
-SYSTEMONE_PATH=""
+DECISIONS_PATH=""
 PRICE_INPUT_SET=0
 PRICE_OUTPUT_SET=0
 
@@ -105,7 +104,7 @@ while [ $# -gt 0 ]; do
         --concurrency) CONCURRENCY="${2:-}"; shift 2 ;;
         --resume) RESUME="${2:-true}"; shift 2 ;;
         --suite-dataset) SUITE_DATASET="${2:-}"; shift 2 ;;
-        --systemone-path) SYSTEMONE_PATH="${2:-}"; shift 2 ;;
+        --decisions-path) DECISIONS_PATH="${2:-}"; shift 2 ;;
         --no-verify) NO_VERIFY="true"; shift ;;
         --input-token-price) INPUT_TOKEN_PRICE="${2:-}"; PRICE_INPUT_SET=1; shift 2 ;;
         --output-token-price) OUTPUT_TOKEN_PRICE="${2:-}"; PRICE_OUTPUT_SET=1; shift 2 ;;
@@ -237,14 +236,14 @@ fi
 
 case "$ENGINE" in
     http)
-        RUN_MODEL="${MODEL_ALPHA:-${DECISION_INDEX_MODEL_ALPHA_DEFAULT:-jev-latest}}"
+        RUN_MODEL="${MODEL_ALPHA:-${DECISION_INDEX_MODEL_ALPHA_DEFAULT:-xor-latest}}"
         if [ -z "$RUN_MODEL" ]; then
             FAIL_REASON="model_alpha is required for engine=http (dashboard chat model is ignored)"
             log_err "$FAIL_REASON"
             exit 1
         fi
         if [ -z "$MODEL_ALPHA" ]; then
-            log_warn "model_alpha not set; using default systemone model ${RUN_MODEL} (dashboard model is not sent to the API)"
+            log_warn "model_alpha not set; using default decisions model ${RUN_MODEL} (dashboard model is not sent to the API)"
         fi
         ;;
     *)
@@ -258,17 +257,17 @@ case "$ENGINE" in
 esac
 
 if [ "$ENGINE" = "http" ]; then
-    if [ -z "$SYSTEMONE_PATH" ]; then
-        SYSTEMONE_PATH="$(default_systemone_path "$RUN_MODEL")"
+    if [ -z "$DECISIONS_PATH" ]; then
+        DECISIONS_PATH="$DECISION_INDEX_DECISIONS_PATH_DEFAULT"
     fi
 fi
 
-log_info "eval_run_id=${EVAL_RUN_ID} engine=${ENGINE} edition=${EDITION} systemone_model=${RUN_MODEL}"
+log_info "eval_run_id=${EVAL_RUN_ID} engine=${ENGINE} edition=${EDITION} decisions_model=${RUN_MODEL}"
 if [ "$ENGINE" = "http" ] && [ -n "$MODEL" ]; then
     log_info "dashboard_model=${MODEL} (Validate alias only)"
 fi
-if [ "$ENGINE" = "http" ] && [ -n "$SYSTEMONE_PATH" ]; then
-    log_info "systemone_path=${SYSTEMONE_PATH}"
+if [ "$ENGINE" = "http" ] && [ -n "$DECISIONS_PATH" ]; then
+    log_info "decisions_path=${DECISIONS_PATH}"
 fi
 log_info "base_url=${ENGINE_BASE} origin=${ORIGIN} timeout=${TIMEOUT} delay_s=${DELAY_S} concurrency=${CONCURRENCY} resume=${RESUME} row_range=${ROW_START:-full}-${ROW_END:-full}"
 
@@ -351,8 +350,8 @@ else
         VERIFY_ARGS=(--no-verify)
     fi
     OPTION_ARGS=(--option "base_url=${ENGINE_BASE}" --option "timeout=${TIMEOUT}")
-    if [ "$ENGINE" = "http" ] && [ -n "$SYSTEMONE_PATH" ]; then
-        OPTION_ARGS+=(--option "systemone_path=${SYSTEMONE_PATH}")
+    if [ "$ENGINE" = "http" ] && [ -n "$DECISIONS_PATH" ]; then
+        OPTION_ARGS+=(--option "decisions_path=${DECISIONS_PATH}")
     fi
 
     log_step "Running eval"

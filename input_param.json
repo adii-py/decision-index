@@ -4,23 +4,23 @@
       "name": "model",
       "type": "text",
       "label": "Model",
-      "description": "Dashboard chat alias (Validate). Required by the form. Jev models are not chat models — use any alias that passes Validate (e.g. jev-latest). For engine=http the API model is model_alpha.",
+      "description": "Dashboard chat alias (Validate). Required by the form. The decisions model is not a chat model — use any alias your key can reach that passes Validate (e.g. private-large). For engine=http the API model is model_alpha.",
       "required": true
     },
     {
       "name": "model_alpha",
       "type": "text",
-      "label": "Systemone model",
-      "description": "Model id for engine=http. jev-latest → POST /v1/systemone; jev-trained → POST /v1/systemone-custom. Other ids (e.g. xor-1.2) use /v1/systemone. If the dashboard does not pass this field, run.sh defaults to jev-latest (not the chat model).",
+      "label": "Decisions model",
+      "description": "Model id for engine=http, sent to POST {base_url}/v1/decisions. If the dashboard does not pass this field, run.sh defaults to xor-latest (not the chat model).",
       "required": true,
-      "default": "jev-latest",
-      "options": ["jev-latest", "jev-trained", "xor-1.2"]
+      "default": "xor-latest",
+      "options": ["xor-latest"]
     },
     {
       "name": "base_url",
       "type": "text",
       "label": "Base URL",
-      "description": "Server origin. Trailing /v1 or /v1/systemone is stripped. engine=http: systemone origin. engine=grid: /v1 is appended for chat completions.",
+      "description": "Server origin. Trailing /v1 or /v1/decisions is stripped. engine=http: decisions origin (POST /v1/decisions). engine=grid: /v1 is appended for chat completions.",
       "required": false,
       "default": "https://grid.ai.juspay.net"
     },
@@ -28,7 +28,7 @@
       "name": "engine",
       "type": "text",
       "label": "Engine",
-      "description": "http: systemone API (default). jev-trained uses /v1/systemone-custom. grid: chat completions. random: pipeline check.",
+      "description": "http: POST /v1/decisions (default). grid: chat completions. random: pipeline check.",
       "required": false,
       "default": "http",
       "options": ["http", "grid", "random"]

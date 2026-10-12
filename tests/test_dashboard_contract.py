@@ -3,13 +3,17 @@ import os
 import subprocess
 from pathlib import Path
 
+import httpx
+import pytest
+
 from decision_index.dashboard_emit import emit, token_report
+from decision_index.engines import validate
 from decision_index.engines.grid import answers_from, extract_json
 from decision_index.engines.http import (
+    HttpDecisions,
     grid_chat_base_url,
+    normalize_decisions_base_url,
     normalize_http_response,
-    normalize_systemone_base_url,
-    systemone_path_for_model,
 )
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,26 +28,44 @@ def run_sh(tmp_path, *args, stub="success"):
     return proc
 
 
-def test_normalize_systemone_base_url_strips_v1_suffixes():
-    assert normalize_systemone_base_url("https://grid.ai.juspay.net/v1") == "https://grid.ai.juspay.net"
-    assert normalize_systemone_base_url("https://grid.ai.juspay.net/v1/systemone") == "https://grid.ai.juspay.net"
-    assert normalize_systemone_base_url("https://grid.ai.juspay.net/v1/systemone-custom") == "https://grid.ai.juspay.net"
-    assert grid_chat_base_url("https://grid.ai.juspay.net") == "https://grid.ai.juspay.net/v1"
+def test_normalize_decisions_base_url_strips_v1_suffixes():
+    assert normalize_decisions_base_url("https://grid.ai.juspay.net/v1") == "https://grid.ai.juspay.net"
+    assert normalize_decisions_base_url("https://grid.ai.juspay.net/v1/decisions") == "https://grid.ai.juspay.net"
+    assert normalize_decisions_base_url("https://grid.ai.juspay.net/") == "https://grid.ai.juspay.net"
+    assert grid_chat_base_url("https://grid.ai.juspay.net/v1/decisions") == "https://grid.ai.juspay.net/v1"
 
 
-def test_systemone_custom_result_maps_to_answers():
-    questions = {"q": {"type": "choice", "criteria": {"red": "red", "blue": "blue"}}}
-    raw = {"result": {"q": "red"}, "confidence": {"q": {"mean_p": 0.99}}}
-    response = normalize_http_response(raw, questions, "/v1/systemone-custom")
-    assert response["answers"]["q"]["choice"] == "red"
-    assert response["answers"]["q"]["probabilities"]["red"] == 0.99
+def test_decisions_engine_posts_model_state_and_questions(monkeypatch):
+    seen = {}
+
+    def handler(request):
+        seen.update(host=request.url.host, path=request.url.path, auth=request.headers.get("authorization"), body=json.loads(request.content))
+        answers = {
+            "when": {"type": "choice", "choice": "later", "probabilities": {"now": 0.2, "later": 0.8}},
+            "luggage": {"type": "noul", "noul": 0.97},
+        }
+        return httpx.Response(200, json={"model": "xor-latest", "answers": answers, "usage": {"input_tokens": 120, "output_tokens": 2}})
+
+    real_client = httpx.Client
+    monkeypatch.setattr(httpx, "Client", lambda **kw: real_client(transport=httpx.MockTransport(handler), **kw))
+    monkeypatch.setenv("DECISION_INDEX_API_KEY", "sk-test")
+    state = {"transcript": "Book me a cab from Koramangala 5th Block to Majestic tomorrow morning for 3 people, we have two big bags", "current_time": "2026-10-05T10:00:00"}
+    questions = {
+        "when": {"type": "choice", "instructions": "Now or scheduled?", "criteria": {"now": "Now", "later": "Scheduled"}},
+        "luggage": {"type": "noul", "instructions": "Does the rider mention bags or luggage?"},
+    }
+    engine = HttpDecisions(base_url="https://grid.ai.juspay.net/v1/decisions", model="xor-latest")
+    response, raw = engine(state, questions)
+    validate(questions, response)
+    assert seen == {"host": "grid.ai.juspay.net", "path": "/v1/decisions", "auth": "Bearer sk-test", "body": {"model": "xor-latest", "questions": questions, "state": state}}
+    assert response["answers"]["when"]["choice"] == "later" and raw["usage"]["output_tokens"] == 2
+    assert engine.provenance["decisions_path"] == "/v1/decisions"
 
 
-def test_systemone_path_presets_for_jev_models():
-    assert systemone_path_for_model("jev-latest") == "/v1/systemone"
-    assert systemone_path_for_model("jev-trained") == "/v1/systemone-custom"
-    assert systemone_path_for_model("xor-1.2") == "/v1/systemone"
-    assert systemone_path_for_model("jev-trained", override="/v1/systemone") == "/v1/systemone"
+def test_decisions_path_override_and_unexpected_response_shape():
+    assert HttpDecisions(base_url="https://grid.example", model="xor-latest", decisions_path="/v2/decisions").decisions_path == "/v2/decisions"
+    with pytest.raises(ValueError, match="/v1/decisions response"):
+        normalize_http_response({"result": {"q": "a"}})
 
 
 def test_grid_reply_parses_fenced_choice_and_noul():
@@ -157,24 +179,25 @@ def test_emit_includes_early_stop_from_status(tmp_path):
     assert add["attempted_ok_rate"] == 0.6667
 
 
-def test_http_run_defaults_systemone_model_when_model_alpha_missing(tmp_path):
+def test_http_run_defaults_decisions_model_when_model_alpha_missing(tmp_path):
     proc = run_sh(
         tmp_path,
-        "jev-default",
+        "xor-default",
         "--engine",
         "http",
         "--model",
-        "glm-5.3-flash",
+        "private-large",
         "--task-range",
         "0-0",
     )
     assert proc.returncode == 0, proc.stderr + proc.stdout
-    assert "systemone_model=jev-latest" in proc.stdout
-    assert "dashboard_model=glm-5.3-flash" in proc.stdout
-    doc = json.loads((tmp_path / "out" / "jev-default_results.json").read_text())
-    assert doc["metrics"]["additional"]["systemone_model"] == "jev-latest"
-    assert doc["metrics"]["additional"]["dashboard_model"] == "glm-5.3-flash"
-    assert doc["metrics"]["additional"]["model"] == "jev-latest"
+    assert "decisions_model=xor-latest" in proc.stdout
+    assert "decisions_path=/v1/decisions" in proc.stdout
+    assert "dashboard_model=private-large" in proc.stdout
+    doc = json.loads((tmp_path / "out" / "xor-default_results.json").read_text())
+    assert doc["metrics"]["additional"]["decisions_model"] == "xor-latest"
+    assert doc["metrics"]["additional"]["dashboard_model"] == "private-large"
+    assert doc["metrics"]["additional"]["model"] == "xor-latest"
 
 
 def test_run_sh_success_honors_output_dir_and_inclusive_range(tmp_path):
@@ -217,9 +240,8 @@ def test_input_param_schema_is_json():
     by_name = {field["name"]: field for field in schema["fields"]}
     assert by_name["model"]["required"] is True
     assert by_name["model_alpha"]["required"] is True
-    assert by_name["model_alpha"]["default"] == "jev-latest"
-    assert "jev-trained" in by_name["model_alpha"]["options"]
-    assert "jev-latest" in by_name["model_alpha"]["options"]
+    assert by_name["model_alpha"]["default"] == "xor-latest"
+    assert by_name["model_alpha"]["options"] == ["xor-latest"]
     assert "suite_dataset" not in by_name
     assert by_name["engine"]["default"] == "http"
     assert by_name["resume"]["default"] == "false"
@@ -265,3 +287,9 @@ def test_run_sh_normalizes_dashboard_concurrency_values(tmp_path):
     assert as_float.returncode == 0 and "concurrency=20 " in as_float.stdout
     junk = run_sh(tmp_path, "run-e", "--model", "stub-model", "--concurrency", "zero")
     assert junk.returncode == 0 and "concurrency=1 " in junk.stdout and "not a positive integer" in junk.stderr
+
+
+def test_dashboard_entrypoints_no_longer_reference_systemone():
+    for name in ("input_param.json", "run.sh", "scripts/dashboard_defaults.sh", "scripts/verify_dashboard_config.sh"):
+        text = (ROOT / name).read_text().lower()
+        assert "systemone" not in text and "jev-trained" not in text, name

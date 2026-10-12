@@ -1,7 +1,7 @@
 from decision_index.engines.base import Engine, NativeAbstention, RandomEngine, Unsupported, validate
 
 REGISTRY = {
-    "http": "decision_index.engines.http:HttpSystemOne",
+    "http": "decision_index.engines.http:HttpDecisions",
     "grid": "decision_index.engines.grid:GridChat",
     "transformers": "decision_index.engines.transformers_engine:TransformersEngine",
     "random": "decision_index.engines.base:RandomEngine",

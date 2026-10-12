@@ -61,18 +61,18 @@ def test_random_engine_round_trip():
 def test_network_engines_are_marked_thread_safe():
     from decision_index.engines.base import Engine, RandomEngine
     from decision_index.engines.grid import GridChat
-    from decision_index.engines.http import HttpSystemOne
+    from decision_index.engines.http import HttpDecisions
 
     assert Engine.thread_safe is False and RandomEngine.thread_safe is False
-    assert HttpSystemOne.thread_safe is True and GridChat.thread_safe is True
+    assert HttpDecisions.thread_safe is True and GridChat.thread_safe is True
 
 
-def test_systemone_429_carries_retry_after():
+def test_decisions_429_carries_retry_after():
     import httpx
 
-    from decision_index.engines.http import HttpStop, HttpSystemOne
+    from decision_index.engines.http import HttpDecisions, HttpStop
 
-    engine = HttpSystemOne(base_url="https://example.test", model="jev-latest")
+    engine = HttpDecisions(base_url="https://example.test", model="xor-latest")
     engine.client = httpx.Client(
         base_url="https://example.test",
         transport=httpx.MockTransport(lambda request: httpx.Response(429, headers={"retry-after": "7"}, text="slow down")),

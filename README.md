@@ -63,7 +63,7 @@ The full suite in one command, scored at the end, entirely on your own machine (
 python -m decision_index pipeline --engine transformers --model Qwen/Qwen2.5-7B-Instruct --out runs/qwen-7b
 ```
 
-For a model behind your own server that speaks the `/v1/systemone` wire format, use the `http` engine:
+For a model behind your own server that speaks the `/v1/decisions` wire format, use the `http` engine:
 
 ```sh
 python -m decision_index pipeline --engine http --option base_url=http://127.0.0.1:8000 --option model=my-model --out runs/my-model
@@ -187,10 +187,10 @@ Encoded in the runner and engines, not left to the reader:
 
 Subclass `decision_index.engines.Engine`, implement `__call__(state, questions) -> (response, raw)`, raise `Unsupported(reason)` for declared capacity limits, and pass `--engine my_module:MyEngine`. The kit ships two reference engines (details in [docs/engines.md](docs/engines.md)):
 
-- `http`: a client for any `POST /v1/systemone` server (`--option base_url=...`, `--option model=...`, extra request fields via `--option extra='{...}'`, token from `DECISION_INDEX_API_KEY`).
+- `http`: a client for any `POST /v1/decisions` server (`--option base_url=...`, `--option model=...`, a different route via `--option decisions_path=...`, extra request fields via `--option extra='{...}'`, token from `DECISION_INDEX_API_KEY`).
 - `transformers`: a stock causal LM scoring every option in one forward pass over a shared prompt.
 
-The board's entrants were run with their authors' own inference code. Entrants whose authors publish a `/v1/systemone` server can be driven by `http` once that server is up; the others need their own harness. [docs/engines.md](docs/engines.md) lists which is which.
+The board's entrants were run with their authors' own inference code. Entrants whose authors publish a server with the same `{model, state, questions}` → `answers` wire format can be driven by `http` once that server is up (set `--option decisions_path=` to the server's route); the others need their own harness. [docs/engines.md](docs/engines.md) lists which is which.
 
 ## Submitting a model to the leaderboard
 
@@ -244,7 +244,7 @@ Full checklist: [docs/dashboard.md](docs/dashboard.md) (Runbook A §14.1).
 
 - Run `./scripts/verify_dashboard_config.sh` locally, then paste `input_param.json` and the printed **commit SHA** into the eval row.
 - Form schema: `input_param.json`. Repo URL: **this fork**. `machine_type`: `n2-standard-4` for smoke.
-- **`engine=grid`**: `base_url` `https://grid.ai.juspay.net/v1` (chat completions). **`engine=http`**: systemone **origin** only, e.g. `http://host:30012` (xor servers are started outside `run.sh`).
+- **`engine=grid`**: `base_url` `https://grid.ai.juspay.net/v1` (chat completions). **`engine=http`**: decisions **origin** only, e.g. `https://grid.ai.juspay.net` (`run.sh` posts `/v1/decisions` with `model_alpha`, default `xor-latest`).
 - First run: **`task_range` `0-9`**, **`resume` `false`**. Unset **`DECISION_INDEX_STUB`** locally so you do not hit the fake score-42 path.
 - Pass: `…_results.json` with numeric Decision Index and `additional.status: scored` (not `no-results` / value 0).
 

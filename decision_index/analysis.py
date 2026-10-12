@@ -255,11 +255,11 @@ def analyze(run_dir, results_json=None, run_id=None):
         "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "run": {
             "engine": meta.get("engine") or env.get("engine"),
-            "model": meta.get("systemone_model") or meta.get("model") or options.get("model"),
+            "model": meta.get("decisions_model") or meta.get("model") or options.get("model"),
             "dashboard_model": meta.get("dashboard_model") or None,
             "edition": scores.get("edition") or meta.get("edition"),
             "base_url": meta.get("base_url") or options.get("base_url"),
-            "systemone_path": options.get("systemone_path"),
+            "decisions_path": options.get("decisions_path"),
             "timeout_s": options.get("timeout"),
             "concurrency": env.get("concurrency", meta.get("concurrency")),
             "delay_s": env.get("delay_s", meta.get("delay_s")),

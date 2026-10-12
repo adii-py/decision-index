@@ -6,7 +6,7 @@ Exceptions have meaning: `Unsupported` marks a declared capacity limit (context 
 
 ## `http`
 
-`POST {base_url}/v1/systemone` with `{"model", "state", "questions"}` and optional extra fields (`--option extra='{"samples":1}'`), bearer token from `DECISION_INDEX_API_KEY`. Grid **`jev-trained`** uses `POST /v1/systemone-custom` with `context` instead of `state`; `run.sh` selects the path from `model_alpha` (override with `--systemone-path`). Custom responses (`result` + optional `confidence`) are normalized to the same `answers` shape as `/v1/systemone`. HTTP 400/413/422 whose body mentions a known capacity marker (`maximum context length`, `options per choice`, `context window`, ...) is `Unsupported`; other non-2xx responses raise.
+`POST {base_url}/v1/decisions` with `{"model", "state", "questions"}` and optional extra fields (`--option extra='{"samples":1}'`), bearer token from `DECISION_INDEX_API_KEY`; the response's `answers` map is used as is. On Grid the model is `xor-latest` (`run.sh` default for `model_alpha`); a server on a different route takes `--option decisions_path=...` (`--decisions-path` on `run.sh`). HTTP 400/413/422 whose body mentions a known capacity marker (`maximum context length`, `options per choice`, `context window`, ...) is `Unsupported`; other non-2xx responses raise.
 
 ```sh
 python -m decision_index run --engine http --option base_url=http://127.0.0.1:8000 --option model=my-model
@@ -14,7 +14,7 @@ python -m decision_index run --engine http --option base_url=http://127.0.0.1:80
 
 ## `grid`
 
-OpenAI-compatible chat completions, the engine the eval-ops dashboard uses against Grid (`base_url` `https://grid.ai.juspay.net/v1`, bearer token from `OPENAI_API_KEY` or `DECISION_INDEX_API_KEY`). One request sends `state` and `questions` as JSON. The model must reply with one JSON object: a choice question's value is an option key, a noul question's value is a probability in `[0, 1]`. Choice probabilities are 1 on the chosen key and 0 on the rest. This is not the board's `/v1/systemone` protocol, and it does not read token logprobs. HTTP 400/413/422 bodies that mention a capacity marker are `Unsupported`.
+OpenAI-compatible chat completions, the engine the eval-ops dashboard uses against Grid (`base_url` `https://grid.ai.juspay.net/v1`, bearer token from `OPENAI_API_KEY` or `DECISION_INDEX_API_KEY`). One request sends `state` and `questions` as JSON. The model must reply with one JSON object: a choice question's value is an option key, a noul question's value is a probability in `[0, 1]`. Choice probabilities are 1 on the chosen key and 0 on the rest. This is not the `/v1/decisions` protocol, and it does not read token logprobs. HTTP 400/413/422 bodies that mention a capacity marker are `Unsupported`.
 
 ```sh
 python -m decision_index run --engine grid --model glm-latest \
@@ -71,9 +71,9 @@ Every entrant on the 0.2 board was run with its author's own inference code, pin
 
 | Entrant | How the lab ran it | With this kit |
 |---|---|---|
-| Jev (reference) | TypeSafe hosted API, `POST /v1/systemone` | `http` with the API's base URL and key |
-| decider-2b-fp8-http, decider-4b, decider-chat-qwen3.6-27b | author's `decider.serve`, `POST /v1/systemone` | `http`, after starting the author's server |
-| xor | author's `server.py`, `POST /v1/systemone` | `http`, after starting the author's server |
+| Jev (reference) | TypeSafe hosted API | `http` with the API's base URL and key (`--option decisions_path=` set to its route) |
+| decider-2b-fp8-http, decider-4b, decider-chat-qwen3.6-27b | author's `decider.serve` | `http`, after starting the author's server (`--option decisions_path=` set to its route) |
+| xor | author's `server.py` | `http`, after starting the author's server (`--option decisions_path=` set to its route) |
 | vllm-pr57250 | the PR's `structured_server.py` over vLLM | `http --option model=jev-latest` |
 | razorback-one-read-3e296f08 | vendored openjev 0.4 server | `http --option model=openjev-latest --option extra='{"samples":1,"steps":1,"think":0,"sequential":false}'` |
 | reflex-27b | author's reflex frontend over SGLang | `http --option model=reflex-27b --option extra='{"permutations":2}'` |

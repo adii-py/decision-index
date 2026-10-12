@@ -28,7 +28,7 @@ def make_run(tmp_path, benchmarks=3):
     }
     (run / "scores.json").write_text(json.dumps(scores))
     (run / "environment.json").write_text(
-        json.dumps({"engine": "http", "engine_options": {"model": "jev-latest", "base_url": "https://grid.example", "timeout": 600, "systemone_path": "/v1/systemone"}, "concurrency": 20, "delay_s": 0, "frozen_corpus_sha256": "abc"})
+        json.dumps({"engine": "http", "engine_options": {"model": "xor-latest", "base_url": "https://grid.example", "timeout": 600, "decisions_path": "/v1/decisions"}, "concurrency": 20, "delay_s": 0, "frozen_corpus_sha256": "abc"})
     )
     t = "2026-10-12T00:{}+00:00".format
     lines = [
@@ -36,7 +36,7 @@ def make_run(tmp_path, benchmarks=3):
         {"run_id": "1:b", "catalog_id": 1, "dataset": "Bench1", "status": "ok", "retries": ["http_429", "http_429"], "started_utc": t("00:01"), "completed_utc": t("00:02"), "total_wall_ms": 700.0},
         {"run_id": "3:a", "catalog_id": 3, "dataset": "Bench3", "status": "error", "exception": "ReadTimeout", "error": "timed out", "started_utc": t("00:02"), "completed_utc": t("00:03"), "total_wall_ms": 50.0},
         {"run_id": "3:a", "catalog_id": 3, "dataset": "Bench3", "status": "ok", "started_utc": t("01:00"), "completed_utc": t("01:00.500000"), "total_wall_ms": 1500.0},
-        {"run_id": "3:b", "catalog_id": 3, "dataset": "Bench3", "status": "error", "exception": "HTTPStatusError", "error": "Server error '502 Bad Gateway' for url 'https://grid.example/v1/systemone'", "started_utc": t("01:00"), "completed_utc": t("01:01"), "total_wall_ms": 40.0},
+        {"run_id": "3:b", "catalog_id": 3, "dataset": "Bench3", "status": "error", "exception": "HTTPStatusError", "error": "Server error '502 Bad Gateway' for url 'https://grid.example/v1/decisions'", "started_utc": t("01:00"), "completed_utc": t("01:01"), "total_wall_ms": 40.0},
         {"run_id": "1:c", "catalog_id": 1, "dataset": "Bench1", "status": "error", "exception": "HttpStop", "http_status": 401, "error": "HTTP 401: Received API Key = sk-abcdef123456, Bearer abc.def", "started_utc": t("01:01"), "completed_utc": t("01:02"), "total_wall_ms": 20.0},
     ]
     (run / "results.jsonl").write_text("".join(json.dumps(r) + "\n" for r in lines) + '{"run_id": "half-writ')
@@ -57,7 +57,7 @@ def test_analyze_merges_scores_and_results(tmp_path):
     assert b[3]["flags"] == ["below chance", "low coverage"]
     assert b[1]["area"] == "tools" and b[1]["p95_ms"] == 700.0 and b[1]["chance"] == 0.25
     assert a["throughput"]["attempts"] == 6 and a["throughput"]["wall_seconds"] == 62.0
-    assert a["run"]["concurrency"] == 20 and a["run"]["model"] == "jev-latest" and a["run"]["systemone_path"] == "/v1/systemone"
+    assert a["run"]["concurrency"] == 20 and a["run"]["model"] == "xor-latest" and a["run"]["decisions_path"] == "/v1/decisions"
     assert a["latency"]["histogram"][1] == {"label": "250–500ms", "count": 1}
     assert a["strongest"][0] == 1 and a["weakest"][0] == 3
 
@@ -80,10 +80,10 @@ def test_status_reflects_early_stop_and_emitted_meta(tmp_path):
     run = make_run(tmp_path)
     (run / "status.json").write_text(json.dumps({"event": "stopped", "ended_abruptly": 1, "stop_reason": "http_429"}))
     results_json = tmp_path / "r1_results.json"
-    results_json.write_text(json.dumps({"metrics": {"additional": {"engine": "http", "systemone_model": "jev-latest", "dashboard_model": "glm-5.3-flash", "task_range": "0-399", "token_usage": {"total_tokens": 99, "coverage_pct": 100.0}}}}))
+    results_json.write_text(json.dumps({"metrics": {"additional": {"engine": "http", "decisions_model": "xor-latest", "dashboard_model": "private-large", "task_range": "0-399", "token_usage": {"total_tokens": 99, "coverage_pct": 100.0}}}}))
     a = analyze(run, results_json)
     assert a["status"]["state"] == "stopped" and a["status"]["stop_reason"] == "http_429"
-    assert a["run"]["dashboard_model"] == "glm-5.3-flash" and a["run"]["task_range"] == "0-399"
+    assert a["run"]["dashboard_model"] == "private-large" and a["run"]["task_range"] == "0-399"
     assert a["tokens"]["total_tokens"] == 99
 
 

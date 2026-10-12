@@ -148,7 +148,7 @@ def no_backoff(monkeypatch):
 
 
 def http_error(status, headers=None):
-    request = httpx.Request("POST", "https://example.test/v1/systemone")
+    request = httpx.Request("POST", "https://example.test/v1/decisions")
     response = httpx.Response(status, headers=headers or {}, request=request)
     return httpx.HTTPStatusError(f"Server error '{status} Bad Gateway' for url '{request.url}'", request=request, response=response)
 

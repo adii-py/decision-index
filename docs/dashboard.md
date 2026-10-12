@@ -85,8 +85,8 @@ Size: **~79 MB** download, **~800 MB** unpacked, **150,759** scoreable rows.
 
 | Field | Value |
 |-------|--------|
-| `model` | any Validate alias (e.g. `glm-5.3-flash`); **not** sent to systemone when `engine=http` |
-| `model_alpha` | `jev-latest` (default) or `jev-trained` (`/v1/systemone-custom`); if omitted, `run.sh` still uses `jev-latest` |
+| `model` | any Validate alias your key can reach (e.g. `private-large`); **not** sent to `/v1/decisions` when `engine=http` |
+| `model_alpha` | `xor-latest` (default); if omitted, `run.sh` still uses `xor-latest` |
 | `engine` | `http` |
 | `base_url` | `https://grid.ai.juspay.net` |
 | `task_range` | `0-9` |
@@ -112,6 +112,6 @@ Reports in `output/` (non-fatal, written after the results JSON): `decision_inde
 
 | `engine` | Endpoint | When |
 |----------|----------|------|
-| `http` | `{origin}/v1/systemone` or `/v1/systemone-custom` | `jev-latest`, `xor-1.2`, …; **`jev-trained`** uses custom — **default** |
+| `http` | `{origin}/v1/decisions` | `xor-latest` — **default** |
 | `grid` | `{origin}/v1/chat/completions` | chat models on Grid |
 | `random` | none | pipeline check only |

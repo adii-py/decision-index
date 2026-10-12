@@ -262,7 +262,7 @@ def _config(a):
         ("Dashboard model", run.get("dashboard_model")),
         ("Edition", run.get("edition")),
         ("Base URL", run.get("base_url")),
-        ("Systemone path", run.get("systemone_path")),
+        ("Decisions path", run.get("decisions_path")),
         ("Request timeout (s)", run.get("timeout_s")),
         ("Concurrency", run.get("concurrency")),
         ("delay_s", run.get("delay_s")),

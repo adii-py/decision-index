@@ -143,7 +143,7 @@ def metrics_document(scores, meta, usage, health=None):
         "engine": meta.get("engine"),
         "model": meta.get("model"),
         "dashboard_model": meta.get("dashboard_model") or "",
-        "systemone_model": meta.get("systemone_model") or meta.get("model") or "",
+        "decisions_model": meta.get("decisions_model") or meta.get("model") or "",
         "task_range": meta.get("task_range") or "",
         "row_start": meta.get("row_start"),
         "row_end": meta.get("row_end"),
@@ -160,8 +160,8 @@ def metrics_document(scores, meta, usage, health=None):
         "counts": counts,
         "note": scores.get("note"),
         "methodology": {
-            "grid": "Chat adapter: one completion per request, choice mass on the selected key. Not the board's /v1/systemone protocol.",
-            "http": "POST /v1/systemone. The server owns the probability distribution.",
+            "grid": "Chat adapter: one completion per request, choice mass on the selected key. Not the /v1/decisions protocol.",
+            "http": "POST /v1/decisions. The server owns the probability distribution.",
             "random": "Uniform baseline. A pipeline check, not a model score.",
         }.get(meta.get("engine"), "Engine " + str(meta.get("engine"))),
     }
@@ -300,7 +300,7 @@ def main(argv=None):
         args.out,
         {
             "model": args.model,
-            "systemone_model": args.model,
+            "decisions_model": args.model,
             "dashboard_model": args.dashboard_model,
             "engine": args.engine,
             "edition": args.edition,
